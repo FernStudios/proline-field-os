@@ -8,6 +8,7 @@ export const LIFECYCLE_STAGES = [
   // Contract
   { id: 'contract_pending',     label: 'Contract pending',      phase: 'contract',  badge: 'badge-amber',  kanban: true  },
   { id: 'contract_signed',      label: 'Contract signed',       phase: 'contract',  badge: 'badge-blue',   kanban: true  },
+  { id: 'deposit_pending',      label: 'Deposit pending',       phase: 'contract',  badge: 'badge-amber',  kanban: true  },
   { id: 'deposit_received',     label: 'Deposit received',      phase: 'contract',  badge: 'badge-green',  kanban: true  },
   // Materials
   { id: 'materials_ordered',    label: 'Materials ordered',     phase: 'materials', badge: 'badge-amber',  kanban: true  },
@@ -54,7 +55,7 @@ export function getStageInfo(stageId) {
 // Kanban columns — each is a group of related stages shown as one column
 export const KANBAN_COLUMNS = [
   { id: 'presale',   label: 'Pre-sale',   stages: ['new_lead','consultation_sched','estimate_pending','estimate_sent','estimate_approved'], color: '#888780' },
-  { id: 'contract',  label: 'Contract',   stages: ['contract_pending','contract_signed','deposit_received'], color: '#0C447C' },
+  { id: 'contract',  label: 'Contract',   stages: ['contract_pending','contract_signed','deposit_pending','deposit_received'], color: '#0C447C' },
   { id: 'materials', label: 'Materials',  stages: ['materials_ordered','materials_ready'], color: '#854F0B' },
   { id: 'scheduled', label: 'Scheduled',  stages: ['scheduled'], color: '#185FA5' },
   { id: 'inprog',    label: 'In progress',stages: ['in_progress','co_pending_approval','work_stopped'], color: '#0a3ef8' },
@@ -71,7 +72,7 @@ export function getKanbanColumn(stageId) {
 
 export const PHASES = [
   { id: 'presale',   label: 'Pre-sale',  stages: ['new_lead','consultation_sched','estimate_pending','estimate_sent','estimate_approved'] },
-  { id: 'contract',  label: 'Contract',  stages: ['contract_pending','contract_signed','deposit_received'] },
+  { id: 'contract',  label: 'Contract',  stages: ['contract_pending','contract_signed','deposit_pending','deposit_received'] },
   { id: 'materials', label: 'Materials', stages: ['materials_ordered','materials_ready'] },
   { id: 'execution', label: 'Execution', stages: ['scheduled','in_progress','co_pending_approval','co_approved','co_declined','work_stopped','punch_list'] },
   { id: 'close',     label: 'Close',     stages: ['final_invoice','paid','lien_waiver_issued','closed'] },
