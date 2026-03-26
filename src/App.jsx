@@ -35,7 +35,15 @@ import CommLog from './pages/CommLog'
 function AuthGuard({ children }) {
   const { user, loading } = useAuth()
   const isDemoMode = useStore(s => s.isDemoMode)
-  if (loading && !isDemoMode) return (
+  // Also check localStorage directly for synchronous hydration (covers direct URL navigation)
+  const isDemoLocal = (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('proline-fieldos-v1') || '{}')
+      return s?.state?.isDemoMode === true
+    } catch { return false }
+  })()
+  const demo = isDemoMode || isDemoLocal
+  if (loading && !demo) return (
     <div className="fixed inset-0 flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-3">
         <Spinner size="lg" />
@@ -43,7 +51,7 @@ function AuthGuard({ children }) {
       </div>
     </div>
   )
-  if (!user && !isDemoMode) return <Navigate to="/auth" replace />
+  if (!user && !demo) return <Navigate to="/auth" replace />
   return children
 }
 
