@@ -8,7 +8,7 @@ import { LIFECYCLE_STAGES, getStageInfo } from '../lib/lifecycle'
 import { generateLienWaiverText } from '../lib/estimateText'
 import { toast } from '../components/ui'
 
-const TABS = ['Overview','Documents','Materials','Invoices','Tasks','Notes']
+const TABS = ['Overview','Documents','Materials','Invoices','Comms','Tasks','Notes']
 // lifecycle stages replaced
 
 export default function JobDetail() {
@@ -301,6 +301,50 @@ export default function JobDetail() {
                   )
                 })
             }
+          </div>
+        )}
+
+        {tab === 'Comms' && (
+          <div>
+            {(() => {
+              const log = job.commLog || []
+              const recent = [...log].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,3)
+              const pending = log.filter(e => e.followUpDate && !e.followUpDone)
+              return (
+                <>
+                  {pending.length > 0 && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                      <p className="text-xs font-semibold text-amber-800">{pending.length} follow-up{pending.length>1?'s':''} pending</p>
+                      {pending.slice(0,2).map(e => (
+                        <p key={e.id} className="text-xs text-amber-700 mt-1">
+                          {fmtDShort(e.followUpDate)}{e.followUpNote ? ` — ${e.followUpNote}` : ''}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {recent.length === 0
+                    ? <Empty icon="💬" title="No communication logged" action={<Button variant="primary" size="sm" onClick={() => navigate(`/jobs/${jobId}/comms`)}>Open comm log</Button>} />
+                    : <div className="space-y-2 mb-3">
+                        {recent.map(e => {
+                          const icons = { call_out:'📞',call_in:'📲',text_out:'💬',text_in:'💬',email_out:'📧',email_in:'📩',site_visit:'🏠',in_person:'🤝',voicemail:'📮',note:'📝' }
+                          return (
+                            <div key={e.id} className="flex gap-2 p-2.5 bg-gray-50 rounded-xl">
+                              <span className="text-sm flex-shrink-0">{icons[e.type]||'💬'}</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-navy line-clamp-2">{e.summary}</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">{fmtDShort(e.date)}</p>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                  }
+                  <Button variant="primary" className="w-full" onClick={() => navigate(`/jobs/${jobId}/comms`)}>
+                    Open full comm log ({log.length})
+                  </Button>
+                </>
+              )
+            })()}
           </div>
         )}
 

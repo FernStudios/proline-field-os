@@ -29,6 +29,7 @@ import EstimatePreview from './pages/contracts/EstimatePreview'
 import TemplateSetup from './pages/TemplateSetup'
 import CrewView from './pages/CrewView'
 import Materials from './pages/Materials'
+import CommLog from './pages/CommLog'
 
 function AuthGuard({ children }) {
   const { user, loading } = useAuth()
@@ -75,6 +76,7 @@ function AppRoutes() {
               <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="/crew" element={<CrewView />} />
               <Route path="/jobs/:jobId/materials" element={<Materials />} />
+              <Route path="/jobs/:jobId/comms" element={<CommLog />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>
