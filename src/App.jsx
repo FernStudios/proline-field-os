@@ -24,6 +24,9 @@ import PL from './pages/PL'
 import Schedule from './pages/Schedule'
 import AllContracts from './pages/AllContracts'
 import AllChangeOrders from './pages/AllChangeOrders'
+import EstimateWizard from './pages/contracts/EstimateWizard'
+import EstimatePreview from './pages/contracts/EstimatePreview'
+import TemplateSetup from './pages/TemplateSetup'
 
 function AuthGuard({ children }) {
   const { user, loading } = useAuth()
@@ -52,6 +55,8 @@ function AppRoutes() {
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/jobs/:jobId" element={<JobDetail />} />
               <Route path="/jobs/:jobId/contract/new" element={<ContractWizard />} />
+              <Route path="/jobs/:jobId/estimate/new" element={<EstimateWizard />} />
+              <Route path="/jobs/:jobId/estimate/preview" element={<EstimatePreview />} />
               <Route path="/jobs/:jobId/contract/preview" element={<ContractPreview />} />
               <Route path="/jobs/:jobId/co/new" element={<COWizard />} />
               <Route path="/jobs/:jobId/co/preview" element={<COPreview />} />
@@ -65,6 +70,7 @@ function AppRoutes() {
               <Route path="/schedule" element={<Schedule />} />
               <Route path="/contracts" element={<AllContracts />} />
               <Route path="/change-orders" element={<AllChangeOrders />} />
+              <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>

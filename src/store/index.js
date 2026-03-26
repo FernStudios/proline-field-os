@@ -13,6 +13,7 @@ const INITIAL_STATE = {
   payrollRuns: [],
   contacts: [],
   leads: [],
+  estimates: [],
   materials: [],
   audit: [],
   settings: {
@@ -53,6 +54,7 @@ const INITIAL_STATE = {
   _nextCon: 1001,
   _nextCO: 1001,
   _nextInv: 1001,
+  _nextEst: 1001,
   _nextEst: 1001,
 }
 
@@ -132,6 +134,10 @@ export const useStore = create(
       updateLead: (id, patch) => set((s) => ({ leads: s.leads.map((l) => l.id === id ? { ...l, ...patch } : l) })),
       deleteLead: (id) => set((s) => ({ leads: s.leads.filter((l) => l.id !== id) })),
 
+      // ── Estimates ─────────────────────────────────────────────────
+      addEstimate: (est) => set((s) => ({ estimates: [...s.estimates, est], _nextEst: (s._nextEst || 1001) + 1 })),
+      updateEstimate: (id, patch) => set((s) => ({ estimates: s.estimates.map((e) => e.id === id ? { ...e, ...patch } : e) })),
+
       // ── Settings ──────────────────────────────────────────────────
       updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
       updateContractDefaults: (patch) => set((s) => ({
@@ -197,7 +203,7 @@ export const useStore = create(
           db: {
             jobs: state.jobs, contracts: state.contracts, changeOrders: state.changeOrders,
             invoices: state.invoices, expenses: state.expenses, crew: state.crew,
-            payrollRuns: state.payrollRuns, contacts: state.contacts, leads: state.leads,
+            payrollRuns: state.payrollRuns, contacts: state.contacts, leads: state.leads, estimates: state.estimates,
             materials: state.materials, settings: state.settings,
             _nextCon: state._nextCon, _nextCO: state._nextCO, _nextInv: state._nextInv,
           },
@@ -241,7 +247,7 @@ export const useStore = create(
     {
       name: 'proline-fieldos-v1',
       partialize: (s) => {
-        const { loadTemplateFromSupabase, syncToSupabase, loadFromSupabase, loadDemoData, reset, ...rest } = s
+        const { loadTemplateFromSupabase, syncToSupabase, loadFromSupabase, loadDemoData, reset, addEstimate, updateEstimate, addLead, updateLead, deleteLead, addPayrollRun, ...rest } = s
         return rest
       },
     }

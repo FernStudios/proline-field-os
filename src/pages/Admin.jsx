@@ -17,6 +17,7 @@ export default function Admin() {
   const { signOut, user } = useAuth()
 
   const co = settings || {}
+  const { contractTemplate, contractTemplateMeta } = useStore()
   const cd = co.contractDefaults || {}
 
   const [company, setCompany] = useState({ coName: co.coName||'', coPhone: co.coPhone||'', coEmail: co.coEmail||'', license: co.license||'', primaryState: co.primaryState||'SC', tagline: co.tagline||'' })
@@ -102,6 +103,13 @@ export default function Admin() {
 
         {tab === 'Contracts' && (
           <div className="space-y-3">
+            <div className="bg-navy rounded-xl p-3 flex items-center justify-between mb-3">
+              <div>
+                <p className="font-semibold text-white text-xs">{co.contractTemplateMeta?.trade ? 'Template loaded: '+co.contractTemplateMeta.trade : 'No AI template'}</p>
+                <p className="text-white/50 text-xs mt-0.5">{co.contractTemplateMeta?.generatedAt ? 'Generated '+new Date(co.contractTemplateMeta.generatedAt).toLocaleDateString() : 'Generate trade-specific scope, warranty & CO language'}</p>
+              </div>
+              <button onClick={() => navigate('/template-setup')} className="text-xs font-bold text-white bg-brand rounded-lg px-3 py-1.5 flex-shrink-0">{co.contractTemplateMeta ? 'Regenerate' : 'Set up'}</button>
+            </div>
             <SectionTitle>Contract defaults</SectionTitle>
             <div className="grid grid-cols-2 gap-3">
               <FormGroup label="Late fee (%/mo)" hint="Default 1.5% = 18%/yr"><Input type="number" step="0.1" value={contractSettings.lateFee} onChange={e=>setContractSettings(c=>({...c,lateFee:parseFloat(e.target.value)||1.5}))} /></FormGroup>

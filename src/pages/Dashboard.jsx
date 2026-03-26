@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { fmtM } from '../lib/utils'
+import { getStageInfo } from '../lib/lifecycle'
 import { SectionTitle, Button } from '../components/ui'
 
 const TILES = [
@@ -68,7 +69,7 @@ export default function Dashboard() {
             <p className="text-white/50 text-xs mt-0.5">Generate AI-powered language for your trade — scope, warranty, CO scenarios</p>
           </div>
           <button
-            onClick={() => navigate('/admin?tab=contracts')}
+            onClick={() => navigate('/template-setup')}
             className="flex-shrink-0 text-xs font-bold text-white bg-brand rounded-lg px-3 py-1.5"
           >
             Set up
@@ -109,8 +110,8 @@ export default function Dashboard() {
                   </div>
                   <div className="text-right flex-shrink-0 ml-3">
                     <p className="font-semibold text-navy text-sm">{fmtM(job.contractValue)}</p>
-                    <span className={`badge text-xs ${job.kbStatus === 'Complete' ? 'badge-green' : job.kbStatus === 'In Progress' ? 'badge-blue' : 'badge-amber'}`}>
-                      {job.kbStatus}
+                    <span className={`badge text-xs ${getStageInfo(job.kbStatus).badge || 'badge-amber'}`}>
+                      {getStageInfo(job.kbStatus).label || job.kbStatus}
                     </span>
                   </div>
                 </div>
