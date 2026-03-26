@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
+import { useStore } from './store'
 import { ToastProvider } from './components/ui'
 import { AppShell } from './components/layout/AppShell'
 import { Spinner } from './components/ui'
@@ -33,7 +34,8 @@ import CommLog from './pages/CommLog'
 
 function AuthGuard({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return (
+  const isDemoMode = useStore(s => s.isDemoMode)
+  if (loading && !isDemoMode) return (
     <div className="fixed inset-0 flex items-center justify-center bg-white">
       <div className="flex flex-col items-center gap-3">
         <Spinner size="lg" />
@@ -41,7 +43,7 @@ function AuthGuard({ children }) {
       </div>
     </div>
   )
-  if (!user) return <Navigate to="/auth" replace />
+  if (!user && !isDemoMode) return <Navigate to="/auth" replace />
   return children
 }
 

@@ -49,6 +49,7 @@ const INITIAL_STATE = {
     adminSettings: { ownerName: 'Brandy Turner', ownerPayPct: 60, retainPct: 20 },
     brevo: '',
   },
+  isDemoMode: false,
   contractTemplate: null,
   contractTemplateMeta: null,
   _nextCon: 1001,
@@ -266,7 +267,7 @@ export const useStore = create(
           { id: 'demo-inv1', num: 'INV-1001', jobId: 'demo-j1', amount: 4800, status: 'partial', payments: [{ id: uid(), method: 'Check', amount: 1120, date: now.toISOString(), memo: 'Materials deposit' }], created: now.toISOString() },
           { id: 'demo-inv2', num: 'INV-1002', jobId: 'demo-j2', amount: 6200, status: 'unpaid', payments: [], created: now.toISOString() },
         ]
-        set({ jobs, invoices, _nextCon: 1001, _nextCO: 1001, _nextInv: 1003 })
+        set({ jobs, invoices, isDemoMode: true, _nextCon: 1001, _nextCO: 1001, _nextInv: 1003 })
       },
 
       reset: () => set(INITIAL_STATE),

@@ -11,10 +11,46 @@ import { toast } from '../components/ui'
 const TABS = ['Overview','Documents','Materials','Invoices','Comms','Tasks','Notes']
 // lifecycle stages replaced
 
+function CommsPreview({ job, jobId, navigate }) {
+  const ICONS = { call_out:'📞',call_in:'📲',text_out:'💬',text_in:'💬',email_out:'📧',email_in:'📩',site_visit:'🏠',in_person:'🤝',voicemail:'📮',note:'📝' }
+  const log = job.commLog || []
+  const recent = [...log].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,3)
+  const pending = log.filter(e => e.followUpDate && !e.followUpDone)
+  return (
+    <div>
+      {pending.length > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+          <p className="text-xs font-semibold text-amber-800 mb-1">{pending.length} follow-up{pending.length>1?'s':''} pending</p>
+          {pending.slice(0,3).map(e => (
+            <p key={e.id} className="text-xs text-amber-700">{fmtDShort(e.followUpDate)}{e.followUpNote ? ` — ${e.followUpNote}` : ''}</p>
+          ))}
+        </div>
+      )}
+      {recent.length === 0
+        ? <Empty icon="💬" title="No communication logged" description="Calls, texts, emails, site visits" action={<Button variant="primary" onClick={() => navigate(`/jobs/${jobId}/comms`)}>Open comm log</Button>} />
+        : <div className="space-y-2 mb-3">
+            {recent.map(e => (
+              <div key={e.id} className="flex gap-2 p-2.5 bg-gray-50 rounded-xl">
+                <span className="text-sm flex-shrink-0">{ICONS[e.type]||'💬'}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-navy line-clamp-2">{e.summary}</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">{fmtDShort(e.date)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+      }
+      <Button variant="primary" className="w-full" onClick={() => navigate(`/jobs/${jobId}/comms`)}>
+        {log.length > 0 ? `Open full log (${log.length} entries)` : 'Open comm log'}
+      </Button>
+    </div>
+  )
+}
+
 export default function JobDetail() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { jobs, contracts, changeOrders, invoices, estimates = [], addInvoice, addPayment, updateJob, updateChangeOrder, settings } = useStore()
+  const { jobs, contracts, changeOrders, invoices, estimates, expenses, addInvoice, addPayment, updateJob, updateChangeOrder, settings } = useStore()
   const [tab, setTab] = useState('Overview')
   const [showCOSelector, setShowCOSelector] = useState(false)
   const [showLienWaiver, setShowLienWaiver] = useState(false)
@@ -36,6 +72,12 @@ export default function JobDetail() {
   const totalPaid = jobInvoices.reduce((s,i) => s+(i.payments||[]).reduce((p,pm) => p+(pm.amount||0), 0), 0)
   const totalInvoiced = jobInvoices.reduce((s,i) => s+(i.amount||0), 0)
   const balance = (job.contractValue||0) - totalPaid
+  const jobExpenses = (expenses || []).filter(e => e.jobId === jobId)
+  const materialsCost = (job.materials || []).reduce((s,m) => s + ((m.qty||0)*(m.costPerUnit||0)), 0)
+  const expenseCost = jobExpenses.reduce((s,e) => s + (e.amount||0), 0)
+  const totalCost = materialsCost + expenseCost
+  const grossProfit = totalPaid - totalCost
+  const grossMargin = totalPaid > 0 ? (grossProfit / totalPaid) * 100 : 0
   const tasks = job.tasks || []
   const notes = job.notes || ''
 
@@ -134,8 +176,52 @@ export default function JobDetail() {
             <div className="grid grid-cols-3 gap-2">
               <div className="bg-gray-50 rounded-xl p-3 text-center"><p className="text-xs text-gray-400 mb-1">Contract</p><p className="font-display font-bold text-navy text-base">{fmtM(job.contractValue)}</p></div>
               <div className="bg-emerald-50 rounded-xl p-3 text-center"><p className="text-xs text-emerald-600 mb-1">Collected</p><p className="font-display font-bold text-emerald-700 text-base">{fmtM(totalPaid)}</p></div>
-              <div className={cn('rounded-xl p-3 text-center', balance>0?'bg-amber-50':'bg-gray-50')}><p className={cn('text-xs mb-1', balance>0?'text-amber-600':'text-gray-400')}>Balance</p><p className={cn('font-display font-bold text-base', balance>0?'text-amber-700':'text-navy')}>{fmtM(balance)}</p></div>
+              <div className={cn('rounded-xl p-3 text-center', balance>0?'bg-amber-50':'bg-gray-50')}><p className={cn('text-xs mb-1', balance>0?'text-amber-600':'text-gray-400')}>Balance due</p><p className={cn('font-display font-bold text-base', balance>0?'text-amber-700':'text-navy')}>{fmtM(balance)}</p></div>
             </div>
+
+            {/* Per-job P&L */}
+            {(totalPaid > 0 || totalCost > 0) && (
+              <div className={cn('rounded-2xl p-4', grossProfit >= 0 ? 'bg-emerald-50 border border-emerald-100' : 'bg-red-50 border border-red-100')}>
+                <p className="text-xs font-bold uppercase tracking-wide mb-3 text-gray-500">Job P&amp;L</p>
+                <div className="space-y-1.5 text-xs mb-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Revenue collected</span>
+                    <span className="font-semibold text-emerald-700">{fmtM(totalPaid)}</span>
+                  </div>
+                  {materialsCost > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Materials cost</span>
+                      <span className="text-red-600">−{fmtM(materialsCost)}</span>
+                    </div>
+                  )}
+                  {expenseCost > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Expenses</span>
+                      <span className="text-red-600">−{fmtM(expenseCost)}</span>
+                    </div>
+                  )}
+                  <div className={cn('flex justify-between border-t pt-1.5 mt-1', grossProfit >= 0 ? 'border-emerald-200' : 'border-red-200')}>
+                    <span className="font-semibold text-gray-700">Gross profit</span>
+                    <span className={cn('font-bold text-sm', grossProfit >= 0 ? 'text-emerald-700' : 'text-red-600')}>{fmtM(grossProfit)}</span>
+                  </div>
+                </div>
+                {totalPaid > 0 && (
+                  <div>
+                    <div className="flex justify-between text-xs mb-1">
+                      <span className="text-gray-500">Gross margin</span>
+                      <span className={cn('font-semibold', grossMargin >= 30 ? 'text-emerald-600' : grossMargin >= 15 ? 'text-amber-600' : 'text-red-500')}>{grossMargin.toFixed(0)}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-white/60 rounded-full overflow-hidden">
+                      <div className={cn('h-full rounded-full transition-all', grossMargin >= 30 ? 'bg-emerald-500' : grossMargin >= 15 ? 'bg-amber-500' : 'bg-red-500')}
+                        style={{width: `${Math.min(100, Math.max(0, grossMargin))}%`}} />
+                    </div>
+                  </div>
+                )}
+                {totalPaid === 0 && totalCost > 0 && (
+                  <p className="text-xs text-gray-400">No payments recorded yet — {fmtM(totalCost)} in costs logged</p>
+                )}
+              </div>
+            )}
 
             {/* Job details */}
             <Card>
@@ -305,47 +391,7 @@ export default function JobDetail() {
         )}
 
         {tab === 'Comms' && (
-          <div>
-            {(() => {
-              const log = job.commLog || []
-              const recent = [...log].sort((a,b) => new Date(b.date)-new Date(a.date)).slice(0,3)
-              const pending = log.filter(e => e.followUpDate && !e.followUpDone)
-              return (
-                <>
-                  {pending.length > 0 && (
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-                      <p className="text-xs font-semibold text-amber-800">{pending.length} follow-up{pending.length>1?'s':''} pending</p>
-                      {pending.slice(0,2).map(e => (
-                        <p key={e.id} className="text-xs text-amber-700 mt-1">
-                          {fmtDShort(e.followUpDate)}{e.followUpNote ? ` — ${e.followUpNote}` : ''}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  {recent.length === 0
-                    ? <Empty icon="💬" title="No communication logged" action={<Button variant="primary" size="sm" onClick={() => navigate(`/jobs/${jobId}/comms`)}>Open comm log</Button>} />
-                    : <div className="space-y-2 mb-3">
-                        {recent.map(e => {
-                          const icons = { call_out:'📞',call_in:'📲',text_out:'💬',text_in:'💬',email_out:'📧',email_in:'📩',site_visit:'🏠',in_person:'🤝',voicemail:'📮',note:'📝' }
-                          return (
-                            <div key={e.id} className="flex gap-2 p-2.5 bg-gray-50 rounded-xl">
-                              <span className="text-sm flex-shrink-0">{icons[e.type]||'💬'}</span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs text-navy line-clamp-2">{e.summary}</p>
-                                <p className="text-[10px] text-gray-400 mt-0.5">{fmtDShort(e.date)}</p>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                  }
-                  <Button variant="primary" className="w-full" onClick={() => navigate(`/jobs/${jobId}/comms`)}>
-                    Open full comm log ({log.length})
-                  </Button>
-                </>
-              )
-            })()}
-          </div>
+          <CommsPreview job={job} jobId={jobId} navigate={navigate} />
         )}
 
         {tab === 'Tasks' && (

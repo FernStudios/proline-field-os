@@ -6,8 +6,9 @@ import { Button, Card, Modal, FormGroup, Input, Select, Empty, SectionTitle } fr
 import { toast } from '../components/ui'
 
 export default function Payroll() {
+  const [params] = useState(() => new URLSearchParams(window.location.search))
   const { crew, payrollRuns, settings, addCrew, updateCrew, deleteCrew, addPayrollRun } = useStore()
-  const [tab, setTab] = useState('run')
+  const [tab, setTab] = useState(new URLSearchParams(window.location.search).get('clockin') ? 'crew' : 'run')
   const [showCrew, setShowCrew] = useState(null) // null | 'new' | crew id
   const [showRun, setShowRun] = useState(false)
   const [crewForm, setCrewForm] = useState({ name: '', role: 'crew', payType: 'daily', rate: '', phone: '' })

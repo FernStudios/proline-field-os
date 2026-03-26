@@ -48,12 +48,19 @@ export default function Invoices() {
     <>
       <TopNav title="Invoices" actions={<button onClick={() => setShowNew(true)} className="text-white text-xl font-light">+</button>} />
       <div className="px-4 pt-4">
-        <div className="bg-navy rounded-2xl p-4 mb-4 flex items-center justify-between">
-          <div>
-            <p className="text-white/50 text-xs mb-0.5">Outstanding</p>
-            <p className="text-white font-display font-bold text-2xl">{fmtM(totalOutstanding)}</p>
+        <div className="bg-navy rounded-2xl p-4 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-white/50 text-xs font-medium">Outstanding balance</p>
+            <p className="text-white/40 text-xs">{invoices.filter(i => i.status !== 'paid').length} open invoices</p>
           </div>
-          <p className="text-white/40 text-xs">{invoices.filter(i => i.status !== 'paid').length} open</p>
+          <p className="text-white font-display font-bold text-3xl">{fmtM(totalOutstanding)}</p>
+          {invoices.length > 0 && (
+            <div className="flex gap-4 mt-2.5 pt-2.5 border-t border-white/10">
+              <div><p className="text-white/40 text-[10px]">Total invoiced</p><p className="text-white/80 text-xs font-semibold">{fmtM(invoices.reduce((s,i)=>s+(i.amount||0),0))}</p></div>
+              <div><p className="text-white/40 text-[10px]">Collected</p><p className="text-emerald-400 text-xs font-semibold">{fmtM(invoices.reduce((s,i)=>s+(i.payments||[]).reduce((p,pm)=>p+(pm.amount||0),0),0))}</p></div>
+              <div><p className="text-white/40 text-[10px]">Invoices</p><p className="text-white/80 text-xs font-semibold">{invoices.length}</p></div>
+            </div>
+          )}
         </div>
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           {[['all','All'],['unpaid','Unpaid'],['partial','Partial'],['paid','Paid']].map(([v,l]) => (

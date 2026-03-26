@@ -5,12 +5,14 @@ import { fmtM } from '../lib/utils'
 import { TopNav } from '../components/layout/AppShell'
 
 const MENU = [
-  { section: 'Business', items: [
+  { section: 'Operations', items: [
     { icon: '📊', label: 'P&L', path: '/pl', desc: 'Income, costs & profitability' },
     { icon: '🗓', label: 'Schedule', path: '/schedule', desc: 'Calendar & crew assignment' },
-    { icon: '👷', label: 'Crew view', path: '/crew', desc: 'Crew assignments & job view' },
+    { icon: '👷', label: 'Crew', path: '/crew', desc: 'Roster, assignments & job view' },
+  ]},
+  { section: 'Finance', items: [
     { icon: '🧾', label: 'Expenses', path: '/expenses', desc: 'Log materials, fuel & field costs' },
-    { icon: '👷', label: 'Payroll', path: '/payroll', desc: 'Crew pay runs & roster' },
+    { icon: '💵', label: 'Payroll', path: '/payroll', desc: 'Crew pay runs & roster' },
   ]},
   { section: 'Documents', items: [
     { icon: '📋', label: 'All contracts', path: '/contracts', desc: 'View all signed contracts' },
@@ -18,6 +20,7 @@ const MENU = [
   ]},
   { section: 'Settings', items: [
     { icon: '⚙️', label: 'Admin', path: '/admin', desc: 'Company, payroll & contract settings' },
+    { icon: '🤖', label: 'Contract template', path: '/template-setup', desc: 'AI-generated trade-specific language' },
   ]},
 ]
 

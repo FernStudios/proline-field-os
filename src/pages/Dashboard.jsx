@@ -10,9 +10,9 @@ const TILES = [
   { label: 'Jobs', icon: '📋', path: '/jobs', color: 'bg-navy' },
   { label: 'Invoices', icon: '💰', path: '/invoices', color: 'bg-navy' },
   { label: 'Leads', icon: '🎯', path: '/leads', color: 'bg-navy' },
+  { label: 'Schedule', icon: '🗓', path: '/schedule', color: 'bg-navy' },
   { label: 'Expenses', icon: '🧾', path: '/expenses', color: 'bg-navy' },
   { label: 'Payroll', icon: '👷', path: '/payroll', color: 'bg-navy' },
-  { label: 'Clock In', icon: '⏱', path: '/payroll?clockin=1', color: 'bg-navy' },
   { label: 'Admin', icon: '⚙️', path: '/admin', color: 'bg-navy' },
 ]
 
