@@ -27,6 +27,8 @@ import AllChangeOrders from './pages/AllChangeOrders'
 import EstimateWizard from './pages/contracts/EstimateWizard'
 import EstimatePreview from './pages/contracts/EstimatePreview'
 import TemplateSetup from './pages/TemplateSetup'
+import CrewView from './pages/CrewView'
+import Materials from './pages/Materials'
 
 function AuthGuard({ children }) {
   const { user, loading } = useAuth()
@@ -71,6 +73,8 @@ function AppRoutes() {
               <Route path="/contracts" element={<AllContracts />} />
               <Route path="/change-orders" element={<AllChangeOrders />} />
               <Route path="/template-setup" element={<TemplateSetup />} />
+              <Route path="/crew" element={<CrewView />} />
+              <Route path="/jobs/:jobId/materials" element={<Materials />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </AppShell>

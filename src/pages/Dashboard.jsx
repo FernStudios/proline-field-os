@@ -6,7 +6,7 @@ import { getStageInfo } from '../lib/lifecycle'
 import { SectionTitle, Button } from '../components/ui'
 
 const TILES = [
-  { label: 'New Job', icon: '🔨', path: '/jobs?new=1', color: 'bg-brand' },
+  { label: 'New Job', icon: '🔨', path: '/jobs', action: 'new', color: 'bg-brand' },
   { label: 'Jobs', icon: '📋', path: '/jobs', color: 'bg-navy' },
   { label: 'Invoices', icon: '💰', path: '/invoices', color: 'bg-navy' },
   { label: 'Leads', icon: '🎯', path: '/leads', color: 'bg-navy' },
@@ -83,7 +83,7 @@ export default function Dashboard() {
         {TILES.map((t) => (
           <button
             key={t.label}
-            onClick={() => navigate(t.path)}
+            onClick={() => navigate(t.path, { state: t.action ? { openNew: true } : undefined })}
             className="kiosk-tile"
           >
             <span className="text-2xl">{t.icon}</span>

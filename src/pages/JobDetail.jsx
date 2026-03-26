@@ -8,13 +8,13 @@ import { LIFECYCLE_STAGES, getStageInfo } from '../lib/lifecycle'
 import { generateLienWaiverText } from '../lib/estimateText'
 import { toast } from '../components/ui'
 
-const TABS = ['Overview','Documents','Invoices','Tasks','Notes']
+const TABS = ['Overview','Documents','Materials','Invoices','Tasks','Notes']
 // lifecycle stages replaced
 
 export default function JobDetail() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { jobs, contracts, changeOrders, invoices, estimates = [], addInvoice, addPayment, updateJob, settings } = useStore()
+  const { jobs, contracts, changeOrders, invoices, estimates = [], addInvoice, addPayment, updateJob, updateChangeOrder, settings } = useStore()
   const [tab, setTab] = useState('Overview')
   const [showCOSelector, setShowCOSelector] = useState(false)
   const [showLienWaiver, setShowLienWaiver] = useState(false)
@@ -60,6 +60,11 @@ export default function JobDetail() {
 
   const deleteTask = (taskId) => {
     updateJob(jobId, { tasks: tasks.filter(t => t.id !== taskId) })
+  }
+
+  const handleResolveCO = (coId, decision) => {
+    updateChangeOrder(coId, { status: decision, resolvedAt: new Date().toISOString() })
+    toast(decision === 'approved' ? 'CO approved — job resumed' : 'CO declined')
   }
 
   const handlePayment = (invId) => {
@@ -144,6 +149,20 @@ export default function JobDetail() {
               </div>
             </Card>
 
+            {/* Customer portal link */}
+            {job.portalToken && (
+              <div className="bg-gray-50 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-navy">Customer portal link</p>
+                  <p className="text-xs text-gray-400">Share with {job.client} for status updates</p>
+                </div>
+                <button onClick={() => { navigator.clipboard?.writeText(window.location.origin+'/portal/'+job.portalToken); toast('Portal link copied') }}
+                  className="text-xs font-semibold text-brand border border-brand rounded-lg px-3 py-1.5 flex-shrink-0 active:scale-95 transition-transform ml-3">
+                  Copy link
+                </button>
+              </div>
+            )}
+
             {/* Quick actions */}
             <div className="grid grid-cols-2 gap-2.5">
               <Button variant="primary" className="w-full text-xs" onClick={() => navigate(`/jobs/${jobId}/contract/new`)}>📋 New contract</Button>
@@ -213,6 +232,36 @@ export default function JobDetail() {
                     </Card>
                   ))}
                 </>
+            }
+          </div>
+        )}
+
+        {tab === 'Materials' && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm text-gray-400">{(job.materials||[]).length} items · {(job.materials||[]).filter(m=>m.status==='delivered'||m.status==='on_site').length} delivered</p>
+              <Button variant="primary" size="sm" onClick={() => navigate(`/jobs/${jobId}/materials`)}>Open materials list</Button>
+            </div>
+            {(job.materials||[]).length === 0
+              ? <Empty icon="📦" title="No materials" action={<Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${jobId}/materials`)}>+ Add materials</Button>} />
+              : <div className="space-y-2">
+                  {(job.materials||[]).slice(0,5).map(mat => (
+                    <div key={mat.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <div>
+                        <p className="text-xs font-semibold text-navy">{mat.name}</p>
+                        <p className="text-[10px] text-gray-400">{mat.qty} {mat.unit}{mat.storageLocation ? ` · 📍 ${mat.storageLocation}` : ''}</p>
+                      </div>
+                      <span className={cn('badge text-xs', mat.status==='delivered'||mat.status==='on_site'?'badge-green':mat.status==='ordered'?'badge-amber':'badge-gray')}>
+                        {mat.status}
+                      </span>
+                    </div>
+                  ))}
+                  {(job.materials||[]).length > 5 && (
+                    <button onClick={() => navigate(`/jobs/${jobId}/materials`)} className="w-full text-center text-xs text-brand py-2">
+                      View all {(job.materials||[]).length} items →
+                    </button>
+                  )}
+                </div>
             }
           </div>
         )}

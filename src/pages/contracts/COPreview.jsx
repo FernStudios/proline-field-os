@@ -9,7 +9,7 @@ import { toast } from '../../components/ui'
 export default function COPreview() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { addChangeOrder } = useStore()
+  const { addChangeOrder, updateJob, jobs } = useStore()
   const [showGate, setShowGate] = useState(true)
   const [ackOption, setAckOption] = useState('')
   const [ackName, setAckName] = useState('')
@@ -38,7 +38,9 @@ export default function COPreview() {
       attorneyAck: { type: ackOption, confirmedBy: ackName.trim(), timestamp: new Date().toISOString() },
     })
     sessionStorage.removeItem('coWizardData')
-    toast('Change order saved ✓')
+    const job = jobs.find(j => j.id === jobId)
+    const coTypeLabel = d.coType === 'customer' ? 'Customer-requested CO' : d.coType === 'required_a' ? 'Required CO (Track A) — work stopped' : 'Required CO (Track B)'
+    toast(coTypeLabel + ' saved — job status updated')
     navigate(`/jobs/${jobId}`)
   }
 

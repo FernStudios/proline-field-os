@@ -65,7 +65,7 @@ export const useStore = create(
 
       // ── Jobs ──────────────────────────────────────────────────────
       addJob: (job) => {
-        const newJob = { id: uid(), created: new Date().toISOString(), status: 'active', kbStatus: 'New Lead', ...job }
+        const newJob = { id: uid(), created: new Date().toISOString(), status: 'active', kbStatus: 'new_lead', portalToken: uid() + uid(), ...job }
         set((s) => ({ jobs: [...s.jobs, newJob] }))
         get().auditLog('job_created', `Job created: ${newJob.client}`, newJob.id)
         return newJob
@@ -93,12 +93,39 @@ export const useStore = create(
         const num = `CO-${String(get()._nextCO).padStart(4, '0')}`
         const rec = { id: uid(), num, status: 'pending', created: new Date().toISOString(), versionTimestamp: new Date().toISOString(), ...co }
         set((s) => ({ changeOrders: [...s.changeOrders, rec], _nextCO: s._nextCO + 1 }))
+        // Auto-advance job lifecycle based on CO type
+        if (co.jobId) {
+          const job = get().jobs.find(j => j.id === co.jobId)
+          if (job) {
+            const prevStage = job.kbStatus
+            let newStage = prevStage
+            if (co.coType === 'required_a') newStage = 'work_stopped'
+            else if (co.coType === 'required_b' || co.coType === 'customer') newStage = 'co_pending_approval'
+            get().updateJob(co.jobId, { kbStatus: newStage, prevKbStatus: prevStage })
+          }
+        }
         get().auditLog('co_created', `Change Order ${num} created`, co.jobId)
         return rec
       },
-      updateChangeOrder: (id, patch) => set((s) => ({
-        changeOrders: s.changeOrders.map((c) => c.id === id ? { ...c, ...patch } : c)
-      })),
+      updateChangeOrder: (id, patch) => {
+        set((s) => ({
+          changeOrders: s.changeOrders.map((c) => c.id === id ? { ...c, ...patch } : c)
+        }))
+        // When CO is approved/declined, restore job to appropriate stage
+        if (patch.status === 'approved' || patch.status === 'declined') {
+          const co = get().changeOrders.find(c => c.id === id)
+          if (co?.jobId) {
+            const job = get().jobs.find(j => j.id === co.jobId)
+            if (job) {
+              let resumeStage = job.prevKbStatus || 'in_progress'
+              if (patch.status === 'approved') resumeStage = 'in_progress'
+              else if (patch.status === 'declined' && co.coType === 'required_a') resumeStage = 'work_stopped'
+              else if (patch.status === 'declined') resumeStage = 'in_progress'
+              get().updateJob(co.jobId, { kbStatus: resumeStage })
+            }
+          }
+        }
+      },
 
       // ── Invoices ──────────────────────────────────────────────────
       addInvoice: (inv) => {
@@ -231,9 +258,9 @@ export const useStore = create(
       loadDemoData: () => {
         const now = new Date()
         const jobs = [
-          { id: 'demo-j1', client: 'Henderson Family', address: '412 Oak Ridge Dr, Greenville SC 29607', phone: '(864) 555-0142', email: 'henderson@email.com', type: 'Gutter Installation', status: 'active', kbStatus: 'Invoiced', contractValue: 4800, state: 'SC', notes: 'Replace all gutters with 6" seamless aluminum in Musket Brown. 120 LF + 6 downspouts.', created: now.toISOString(), startDate: new Date(now.getTime() - 7*86400000).toISOString().split('T')[0] },
-          { id: 'demo-j2', client: 'Martinez Property', address: '891 Pelham Rd, Greenville SC 29615', phone: '(864) 555-0187', email: 'martinez@email.com', type: 'Fascia & Soffit', status: 'active', kbStatus: 'In Progress', contractValue: 6200, state: 'SC', notes: 'Full fascia and soffit replacement. James Hardie fiber cement boards.', created: now.toISOString(), startDate: new Date(now.getTime() - 2*86400000).toISOString().split('T')[0] },
-          { id: 'demo-j3', client: 'Whitmore LLC', address: '234 Verdae Blvd, Greenville SC 29607', phone: '(864) 555-0209', email: 'whitmore@email.com', type: 'Gutter Guards', status: 'pending', kbStatus: 'Estimate', contractValue: 2400, state: 'SC', notes: 'Micro-mesh guards on existing gutters. Commercial property.', created: now.toISOString() },
+          { id: 'demo-j1', client: 'Henderson Family', address: '412 Oak Ridge Dr, Greenville SC 29607', phone: '(864) 555-0142', email: 'henderson@email.com', type: 'Gutter Installation', status: 'active', kbStatus: 'final_invoice', contractValue: 4800, state: 'SC', notes: 'Replace all gutters with 6-inch seamless aluminum in Musket Brown. 120 LF + 6 downspouts.', created: now.toISOString(), startDate: new Date(now.getTime() - 7*86400000).toISOString().split('T')[0], portalToken: 'demo-token-j1-portal-henderson', materials: [{ id: 'dm1', name: '6-inch aluminum gutter - Musket Brown', qty: 120, unit: 'LF', costPerUnit: 4.50, totalCost: 540, supplier: 'ABC Supply', storageLocation: 'Truck bed - covered', status: 'on_site', createdAt: now.toISOString() }, { id: 'dm2', name: 'K-style downspouts 10ft', qty: 6, unit: 'EA', costPerUnit: 12, totalCost: 72, supplier: 'ABC Supply', storageLocation: 'Truck bed', status: 'on_site', createdAt: now.toISOString() }] },
+          { id: 'demo-j2', client: 'Martinez Property', address: '891 Pelham Rd, Greenville SC 29615', phone: '(864) 555-0187', email: 'martinez@email.com', type: 'Fascia & Soffit', status: 'active', kbStatus: 'in_progress', contractValue: 6200, state: 'SC', notes: 'Full fascia and soffit replacement. James Hardie fiber cement boards.', created: now.toISOString(), startDate: new Date(now.getTime() - 2*86400000).toISOString().split('T')[0], portalToken: 'demo-token-j2-portal-martinez', materials: [{ id: 'dm3', name: 'James Hardie Trim Board 5/4x6x12', qty: 40, unit: 'PC', costPerUnit: 28, totalCost: 1120, supplier: 'Home Depot', storageLocation: 'Customer garage - left wall', status: 'delivered', deliveredDate: new Date(now.getTime() - 1*86400000).toISOString().split('T')[0], createdAt: now.toISOString() }] },
+          { id: 'demo-j3', client: 'Whitmore LLC', address: '234 Verdae Blvd, Greenville SC 29607', phone: '(864) 555-0209', email: 'whitmore@email.com', type: 'Gutter Guards', status: 'pending', kbStatus: 'estimate_sent', contractValue: 2400, state: 'SC', notes: 'Micro-mesh guards on existing gutters. Commercial property.', created: now.toISOString(), portalToken: 'demo-token-j3-portal-whitmore' },
         ]
         const invoices = [
           { id: 'demo-inv1', num: 'INV-1001', jobId: 'demo-j1', amount: 4800, status: 'partial', payments: [{ id: uid(), method: 'Check', amount: 1120, date: now.toISOString(), memo: 'Materials deposit' }], created: now.toISOString() },
