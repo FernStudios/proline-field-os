@@ -423,6 +423,9 @@ export const useStore = create(
       removeTeamMember: (id) => set((s) => ({
         accountTeam: s.accountTeam.filter(m => m.id !== id)
       })),
+      updateTeamMember: (id, patch) => set((s) => ({
+        accountTeam: s.accountTeam.map(m => m.id === id ? { ...m, ...patch } : m)
+      })),
       updateSubscription: (patch) => set((s) => ({
         subscription: { ...s.subscription, ...patch }
       })),
