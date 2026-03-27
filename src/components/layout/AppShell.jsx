@@ -5,18 +5,18 @@ import { useStore } from '../../store'
 import { cn } from '../../lib/utils'
 
 const NAV_ALL = [
-  { path: '/dashboard', icon: HomeIcon, label: 'Dashboard', roles: ['owner','office','foreman','crew'] },
-  { path: '/jobs', icon: BriefcaseIcon, label: 'Jobs', roles: ['owner','office','foreman','crew'] },
-  { path: '/invoices', icon: DollarIcon, label: 'Invoices', roles: ['owner','office','foreman'] },
-  { path: '/leads', icon: FunnelIcon, label: 'Leads', roles: ['owner','office','foreman'] },
-  { path: '/more', icon: GridIcon, label: 'More', roles: ['owner','office','foreman','crew'] },
+  { path: '/dashboard', icon: HomeIcon, label: 'Dashboard', perm: 'dashboard' },
+  { path: '/jobs', icon: BriefcaseIcon, label: 'Jobs', perm: 'jobs_view' },
+  { path: '/invoices', icon: DollarIcon, label: 'Invoices', perm: 'invoices_view' },
+  { path: '/leads', icon: FunnelIcon, label: 'Leads', perm: 'leads' },
+  { path: '/more', icon: GridIcon, label: 'More', perm: null }, // always visible
 ]
 
 export function AppShell({ children }) {
   const { pathname } = useLocation()
 
   const { user } = useAuth()
-  const { settings, viewAsRole, setViewAsRole } = useStore()
+  const { settings, viewAsRole, setViewAsRole, rolePermissions } = useStore()
 
   // Trial banner: show days remaining if within 14-day trial
   const trialBanner = (() => {
@@ -35,7 +35,12 @@ export function AppShell({ children }) {
         {children}
       </div>
       <nav className="bottomnav">
-        {NAV_ALL.filter(n => !n.roles || n.roles.includes(viewAsRole || 'owner')).map(({ path, icon: Icon, label }) => {
+        {NAV_ALL.filter(n => {
+          if (!n.perm) return true  // always show
+          if (!viewAsRole || viewAsRole === 'owner') return true
+          if (viewAsRole === 'customer') return false
+          return !!rolePermissions?.[viewAsRole]?.[n.perm]
+        }).map(({ path, icon: Icon, label }) => {
           const active = path === '/' ? pathname === '/' : pathname.startsWith(path)
           return (
             <NavButton key={path} path={path} active={active} icon={<Icon active={active} />} label={label} />

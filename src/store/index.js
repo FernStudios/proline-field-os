@@ -58,6 +58,81 @@ const INITIAL_STATE = {
   _nextInv: 1001,
   _nextEst: 1001,
   schemaVersion: 2,
+  rolePermissions: {
+    // Owner always has full access — not stored here, always true
+    office: {
+      dashboard: true,
+      jobs_view: true,
+      jobs_edit: true,
+      kanban: true,
+      estimates: true,
+      contracts: true,
+      change_orders: true,
+      materials_view: true,
+      materials_storage: true,  // storage locations
+      comms_log: true,
+      invoices_view: true,
+      invoices_edit: true,
+      payments: true,
+      leads: true,
+      expenses_view: true,
+      expenses_edit: true,      // own only vs all
+      payroll: false,           // payroll is owner-only by default
+      pl: true,
+      schedule: true,
+      crew_view: true,
+      admin: false,
+      template_setup: false,
+    },
+    foreman: {
+      dashboard: true,
+      jobs_view: true,
+      jobs_edit: true,
+      kanban: true,
+      estimates: true,
+      contracts: true,
+      change_orders: true,
+      materials_view: true,
+      materials_storage: false,
+      comms_log: true,
+      invoices_view: false,
+      invoices_edit: false,
+      payments: false,
+      leads: true,
+      expenses_view: false,
+      expenses_edit: false,
+      payroll: false,
+      pl: false,
+      schedule: true,
+      crew_view: true,
+      admin: false,
+      template_setup: false,
+    },
+    crew: {
+      dashboard: true,
+      jobs_view: true,
+      jobs_edit: false,
+      kanban: true,
+      estimates: false,
+      contracts: false,
+      change_orders: false,
+      materials_view: true,
+      materials_storage: false,
+      comms_log: false,
+      invoices_view: false,
+      invoices_edit: false,
+      payments: false,
+      leads: false,
+      expenses_view: false,
+      expenses_edit: false,
+      payroll: false,
+      pl: false,
+      schedule: true,
+      crew_view: false,
+      admin: false,
+      template_setup: false,
+    },
+  },
   supportTickets: [],          // submitted by this account to platform support
   accountTeam: [],             // [{id, name, email, role:'owner'|'office'|'foreman'|'crew', addedAt}]
   subscription: {              // subscription/billing metadata
@@ -244,6 +319,7 @@ export const useStore = create(
             invoices: state.invoices, expenses: state.expenses, crew: state.crew,
             payrollRuns: state.payrollRuns, contacts: state.contacts, leads: state.leads, estimates: state.estimates, schemaVersion: 2,
             supportTickets: state.supportTickets || [], accountTeam: state.accountTeam || [], subscription: state.subscription || {},
+            rolePermissions: state.rolePermissions,
             materials: state.materials, settings: state.settings,
             _nextCon: state._nextCon, _nextCO: state._nextCO, _nextInv: state._nextInv,
           },
@@ -269,7 +345,7 @@ export const useStore = create(
               return false
             }
             // Valid schema — load it
-            set((s) => ({ ...s, ...db }))
+            set((s) => ({ ...s, ...db, rolePermissions: db.rolePermissions || s.rolePermissions }))
             return true
           }
         } catch (e) {
@@ -296,6 +372,18 @@ export const useStore = create(
       },
 
       setViewAsRole: (role) => set({ viewAsRole: role }),
+      updateRolePermissions: (role, patch) => set((s) => ({
+        rolePermissions: {
+          ...s.rolePermissions,
+          [role]: { ...s.rolePermissions[role], ...patch }
+        }
+      })),
+      setRolePermission: (role, key, value) => set((s) => ({
+        rolePermissions: {
+          ...s.rolePermissions,
+          [role]: { ...s.rolePermissions[role], [key]: value }
+        }
+      })),
 
       // Support tickets
       addSupportTicket: (ticket) => set((s) => ({
