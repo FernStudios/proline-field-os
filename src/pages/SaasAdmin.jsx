@@ -26,9 +26,16 @@ export default function SaasAdmin() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // All hooks must come before any conditional returns
+  const isOwner = !!user && user.email?.toLowerCase() === OWNER_EMAIL.toLowerCase()
+
+  useEffect(() => {
+    if (isOwner) fetchAccounts()
+  }, [isOwner])
+
   // Hard gate — only platform owner
   if (!user) return <div className="p-8 text-center text-gray-400">Not signed in</div>
-  if (user.email?.toLowerCase() !== OWNER_EMAIL.toLowerCase()) {
+  if (!isOwner) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8 text-center bg-gray-50">
         <div>
@@ -40,8 +47,6 @@ export default function SaasAdmin() {
       </div>
     )
   }
-
-  useEffect(() => { fetchAccounts() }, [])
 
   const fetchAccounts = async () => {
     if (!supabase) { setLoading(false); setError('Supabase not configured'); return }
