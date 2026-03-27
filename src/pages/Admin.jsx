@@ -18,10 +18,11 @@ export default function Admin() {
   const [reviewDate, setReviewDate] = useState(new Date().toISOString().split('T')[0])
   const [acceptedDisclaimer, setAcceptedDisclaimer] = useState(false)
   const [tab, setTab] = useState(params.get('tab') || 'Company')
-  const { settings, updateSettings, updateContractDefaults, reset } = useStore()
-  const { signOut, user } = useAuth()
+  const { settings, updateSettings, updateContractDefaults, reset, syncToSupabase } = useStore()
+  const { signOut } = useAuth()
 
   const co = settings || {}
+  const doSync = () => { if (user?.id && syncToSupabase) syncToSupabase(user.id) }
   const { contractTemplate, contractTemplateMeta } = useStore(s => ({ contractTemplate: s.contractTemplate, contractTemplateMeta: s.contractTemplateMeta }))
   const cd = co.contractDefaults || {}
 
@@ -32,10 +33,10 @@ export default function Admin() {
   const [showJobTypeModal, setShowJobTypeModal] = useState(null)
   const [jtForm, setJtForm] = useState({ name: '', warrantyYrs: 5 })
 
-  const saveCompany = () => { updateSettings({ ...company, adminSettings: { ...co.adminSettings, ...paySettings } }); toast('Company settings saved') }
-  const saveContracts = () => { updateContractDefaults(contractSettings); toast('Contract defaults saved') }
-  const savePayroll = () => { updateSettings({ adminSettings: { ...co.adminSettings, ...paySettings } }); toast('Payroll settings saved') }
-  const saveBranding = () => { updateSettings({ brandColor: brandSettings.brandColor, tagline: brandSettings.tagline }); toast('Branding saved') }
+  const saveCompany = () => { updateSettings({ ...company, adminSettings: { ...co.adminSettings, ...paySettings } }); doSync(); toast('Company settings saved') }
+  const saveContracts = () => { updateContractDefaults(contractSettings); doSync(); toast('Contract defaults saved') }
+  const savePayroll = () => { updateSettings({ adminSettings: { ...co.adminSettings, ...paySettings } }); doSync(); toast('Payroll settings saved') }
+  const saveBranding = () => { updateSettings({ brandColor: brandSettings.brandColor, tagline: brandSettings.tagline }); doSync(); toast('Branding saved') }
 
   const jobTypes = co.jobTypes || []
 
@@ -44,13 +45,13 @@ export default function Admin() {
     const updated = showJobTypeModal === 'new'
       ? [...jobTypes, { id: Date.now().toString(), ...jtForm, warrantyYrs: parseInt(jtForm.warrantyYrs)||5 }]
       : jobTypes.map(jt => jt.id === showJobTypeModal ? { ...jt, ...jtForm, warrantyYrs: parseInt(jtForm.warrantyYrs)||5 } : jt)
-    updateSettings({ jobTypes: updated })
+    updateSettings({ jobTypes: updated }); doSync()
     setShowJobTypeModal(null)
     toast('Job type saved')
   }
 
   const deleteJobType = (id) => {
-    updateSettings({ jobTypes: jobTypes.filter(jt => jt.id !== id) })
+    updateSettings({ jobTypes: jobTypes.filter(jt => jt.id !== id) }); doSync()
     setShowJobTypeModal(null)
     toast('Removed')
   }
@@ -202,7 +203,7 @@ export default function Admin() {
                           <Input type="date" value={reviewDate} onChange={e => setReviewDate(e.target.value)} />
                         </FormGroup>
                         <button
-                          onClick={() => { if (!attorneyName.trim()) { toast('Enter your attorney name', 'error'); return }; unlockTemplate('attorney', attorneyName.trim(), reviewDate); setShowUnlock(false); setUnlockType(null); toast('Template unlocked — attorney reviewed'); get().syncToSupabase?.(JSON.parse(localStorage.getItem('sb-jlqiiofhjudgezzbnxkc-auth-token')||'{}')?.user?.id) }}
+                          onClick={() => { if (!attorneyName.trim()) { toast('Enter your attorney name', 'error'); return }; unlockTemplate('attorney', attorneyName.trim(), reviewDate); setShowUnlock(false); setUnlockType(null); toast('Template unlocked — attorney reviewed'); doSync() }}
                           className="w-full py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-xl">
                           Activate — attorney reviewed ✓
                         </button>

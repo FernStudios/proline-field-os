@@ -4,6 +4,7 @@ import Landing from './pages/Landing'
 import SaasAdmin from './pages/SaasAdmin'
 import Support from './pages/Support'
 import RolePermissions from './pages/RolePermissions'
+import DocumentVault from './pages/DocumentVault'
 import AccountTeam from './pages/AccountTeam'
 import { useStore } from './store'
 import { ToastProvider } from './components/ui'
@@ -113,6 +114,7 @@ function AppRoutes() {
               <Route path="/template-setup" element={<TemplateSetup />} />
               <Route path="/support" element={<Support />} />
               <Route path="/role-permissions" element={<RolePermissions />} />
+              <Route path="/documents" element={<DocumentVault />} />
               <Route path="/account-team" element={<AccountTeam />} />
               <Route path="/crew" element={<CrewView />} />
               <Route path="/jobs/:jobId/materials" element={<Materials />} />

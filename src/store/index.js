@@ -133,7 +133,8 @@ const INITIAL_STATE = {
       template_setup: false,
     },
   },
-  supportTickets: [],          // submitted by this account to platform support
+  supportTickets: [],
+  customDocuments: [], // [{id, name, type:'contract'|'co'|'signed'|'other', jobId, uploadedAt, notes, fileData, fileName, fileSize}]          // submitted by this account to platform support
   accountTeam: [],             // [{id, name, email, role:'owner'|'office'|'foreman'|'crew', addedAt}]
   subscription: {              // subscription/billing metadata
     plan: 'trial',             // trial | solo | crew | company
@@ -319,6 +320,7 @@ export const useStore = create(
             payrollRuns: state.payrollRuns, contacts: state.contacts, leads: state.leads, estimates: state.estimates, schemaVersion: 2,
             supportTickets: state.supportTickets || [], accountTeam: state.accountTeam || [], subscription: state.subscription || {},
             rolePermissions: state.rolePermissions,
+            customDocuments: state.customDocuments || [],
             materials: state.materials, settings: state.settings,
             _nextCon: state._nextCon, _nextCO: state._nextCO, _nextInv: state._nextInv,
           },
@@ -371,6 +373,17 @@ export const useStore = create(
       },
 
       setViewAsRole: (role) => set({ viewAsRole: role }),
+
+      // Custom documents (uploaded contracts, wet-signed docs, etc.)
+      addCustomDocument: (doc) => set((s) => ({
+        customDocuments: [{ id: uid(), uploadedAt: new Date().toISOString(), ...doc }, ...s.customDocuments]
+      })),
+      updateCustomDocument: (id, patch) => set((s) => ({
+        customDocuments: s.customDocuments.map(d => d.id === id ? { ...d, ...patch } : d)
+      })),
+      deleteCustomDocument: (id) => set((s) => ({
+        customDocuments: s.customDocuments.filter(d => d.id !== id)
+      })),
 
       unlockTemplate: (reviewType, reviewedBy, reviewDate) => set((s) => ({
         contractTemplateMeta: {
