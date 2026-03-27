@@ -144,9 +144,19 @@ Return ONLY valid JSON, no markdown:
         })
       })
       const data = await resp.json()
+      // Check for API-level error
+      if (data.error) throw new Error(data.error)
+
       const text = data.content?.[0]?.text || ''
+      if (!text.trim()) throw new Error('Empty response from AI — check GEMINI_API_KEY in Vercel env vars')
+
       const clean = text.replace(/```json\n?/g,'').replace(/\n?```/g,'').trim()
-      const parsed = JSON.parse(clean)
+
+      // Find the JSON object in the response (sometimes wrapped in extra text)
+      const jsonMatch = clean.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) throw new Error('No JSON found in AI response')
+
+      const parsed = JSON.parse(jsonMatch[0])
       setGenerated(parsed)
       setStep(3)
     } catch(e) {
