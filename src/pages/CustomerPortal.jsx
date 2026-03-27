@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { fmtM, fmtDShort } from '../lib/utils'
 import { getStageInfo, CUSTOMER_PHASES, customerPhaseIndex } from '../lib/lifecycle'
+import SignatureCanvas from '../components/SignatureCanvas'
 import { supabase } from '../lib/supabase'
 
 // CUSTOMER_PHASES and customerPhaseIndex imported from lifecycle.js
@@ -11,6 +12,9 @@ export default function CustomerPortal() {
   const [status, setStatus] = useState('loading')
   const [data, setData] = useState(null)
   const [decision, setDecision] = useState(null)
+  const [showSignModal, setShowSignModal] = useState(false)
+  const [signatureData, setSignatureData] = useState(null)
+  const [signingDoc, setSigningDoc] = useState(null) // { type: 'contract'|'estimate', id }
   const [declineReason, setDeclineReason] = useState('')
   const [submitted, setSubmitted] = useState(false)
 
@@ -49,6 +53,34 @@ export default function CustomerPortal() {
       console.error(e)
       setStatus('not_found')
     }
+  }
+
+  const handleSign = async (docType, docId, signatureDataUrl) => {
+    // Write signature back to Supabase
+    if (supabase && data?.userId) {
+      try {
+        const { data: rows } = await supabase.from('user_data').select('db').eq('user_id', data.userId).single()
+        if (rows?.db) {
+          const db = rows.db
+          if (docType === 'contract') {
+            const idx = db.contracts.findIndex(c => c.id === docId)
+            if (idx >= 0) {
+              db.contracts[idx].status = 'signed'
+              db.contracts[idx].signature = { dataUrl: signatureDataUrl, signedAt: new Date().toISOString() }
+              // Advance job to contract_signed
+              const jobIdx = db.jobs.findIndex(j => j.id === data.job?.id)
+              if (jobIdx >= 0 && db.jobs[jobIdx].kbStatus === 'contract_pending') {
+                db.jobs[jobIdx].kbStatus = 'contract_signed'
+              }
+            }
+          }
+          await supabase.from('user_data').update({ db }).eq('user_id', data.userId)
+        }
+      } catch(e) { console.warn('Sign error:', e.message) }
+    }
+    setSignatureData(signatureDataUrl)
+    setShowSignModal(false)
+    setSigningDoc(null)
   }
 
   const handleDecision = async (choice) => {

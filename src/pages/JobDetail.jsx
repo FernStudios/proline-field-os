@@ -64,6 +64,12 @@ export default function JobDetail() {
   const [taskText, setTaskText] = useState('')
 
   const job = jobs.find(j => j.id === jobId)
+  const isHydrated = useStore(s => s._hydrated !== false)
+  if (!job && !isHydrated) return (
+    <div className="fixed inset-0 flex items-center justify-center bg-white">
+      <div className="w-8 h-8 border-2 border-gray-200 border-t-navy rounded-full animate-spin" />
+    </div>
+  )
   if (!job) return <div className="p-8 text-center text-gray-400">Job not found. <button onClick={() => navigate('/jobs')} className="text-brand underline">Back to jobs</button></div>
 
   const jobContracts = contracts.filter(c => c.jobId === jobId)
@@ -71,7 +77,9 @@ export default function JobDetail() {
   const jobInvoices = invoices.filter(i => i.jobId === jobId)
   const totalPaid = jobInvoices.reduce((s,i) => s+(i.payments||[]).reduce((p,pm) => p+(pm.amount||0), 0), 0)
   const totalInvoiced = jobInvoices.reduce((s,i) => s+(i.amount||0), 0)
-  const balance = (job.contractValue||0) - totalPaid
+  const contractVal = job.contractValue || 0
+  const balance = Math.max(0, contractVal - totalPaid)
+  const overpaid = contractVal > 0 && totalPaid > contractVal ? totalPaid - contractVal : 0
   const jobExpenses = (expenses || []).filter(e => e.jobId === jobId)
   const materialsCost = (job.materials || []).reduce((s,m) => s + ((m.qty||0)*(m.costPerUnit||0)), 0)
   const expenseCost = jobExpenses.reduce((s,e) => s + (e.amount||0), 0)
@@ -297,6 +305,11 @@ export default function JobDetail() {
                           {c.attorneyAck && <p className={cn('text-xs mt-1', c.attorneyAck.type==='reviewed'?'text-emerald-600':'text-amber-500')}>
                             {c.attorneyAck.type==='reviewed'?'✓ Attorney reviewed':c.attorneyAck.type==='ai_generated'?'⚡ AI provisions':'⚠ No review'} · {c.attorneyAck.confirmedBy}
                           </p>}
+                          {c.signature ? (
+                            <p className="text-xs text-emerald-600 mt-1">✓ Signed electronically {c.signature.signedAt ? new Date(c.signature.signedAt).toLocaleDateString() : ''}</p>
+                          ) : (
+                            <p className="text-xs text-amber-600 mt-1">Awaiting customer signature</p>
+                          )}
                         </div>
                         <p className="text-xs text-gray-400">{fmtDShort(c.created)}</p>
                       </div>

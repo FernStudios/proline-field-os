@@ -50,6 +50,7 @@ const INITIAL_STATE = {
     brevo: '',
   },
   isDemoMode: false,
+  _hydrated: true,
   contractTemplate: null,
   contractTemplateMeta: null,
   _nextCon: 1001,
@@ -257,6 +258,8 @@ export const useStore = create(
 
       // ── Demo Data ─────────────────────────────────────────────────
       loadDemoData: () => {
+        // Clear any stale data before loading demo
+        set({ ...INITIAL_STATE, isDemoMode: true })
         const now = new Date()
         const jobs = [
           { id: 'demo-j1', client: 'Henderson Family', address: '412 Oak Ridge Dr, Greenville SC 29607', phone: '(864) 555-0142', email: 'henderson@email.com', type: 'Gutter Installation', status: 'active', kbStatus: 'final_invoice', contractValue: 4800, state: 'SC', notes: 'Replace all gutters with 6-inch seamless aluminum in Musket Brown. 120 LF + 6 downspouts.', created: now.toISOString(), startDate: new Date(now.getTime() - 7*86400000).toISOString().split('T')[0], portalToken: 'demo-token-j1-portal-henderson', materials: [{ id: 'dm1', name: '6-inch aluminum gutter - Musket Brown', qty: 120, unit: 'LF', costPerUnit: 4.50, totalCost: 540, supplier: 'ABC Supply', storageLocation: 'Truck bed - covered', status: 'on_site', createdAt: now.toISOString() }, { id: 'dm2', name: 'K-style downspouts 10ft', qty: 6, unit: 'EA', costPerUnit: 12, totalCost: 72, supplier: 'ABC Supply', storageLocation: 'Truck bed', status: 'on_site', createdAt: now.toISOString() }] },
@@ -267,7 +270,7 @@ export const useStore = create(
           { id: 'demo-inv1', num: 'INV-1001', jobId: 'demo-j1', amount: 4800, status: 'partial', payments: [{ id: uid(), method: 'Check', amount: 1120, date: now.toISOString(), memo: 'Materials deposit' }], created: now.toISOString() },
           { id: 'demo-inv2', num: 'INV-1002', jobId: 'demo-j2', amount: 6200, status: 'unpaid', payments: [], created: now.toISOString() },
         ]
-        set({ jobs, invoices, isDemoMode: true, _nextCon: 1001, _nextCO: 1001, _nextInv: 1003 })
+        set(s => ({ ...s, jobs, invoices, _nextCon: 1001, _nextCO: 1001, _nextInv: 1003 }))
       },
 
       reset: () => set(INITIAL_STATE),
