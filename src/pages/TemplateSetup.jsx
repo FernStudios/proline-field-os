@@ -139,7 +139,7 @@ Return ONLY valid JSON, no markdown:
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           model: 'claude-haiku-4-5-20251001',
-          max_tokens: 3000,
+          max_tokens: 8000,
           messages: [{ role: 'user', content: prompt }]
         })
       })
@@ -152,11 +152,42 @@ Return ONLY valid JSON, no markdown:
 
       const clean = text.replace(/```json\n?/g,'').replace(/\n?```/g,'').trim()
 
-      // Find the JSON object in the response (sometimes wrapped in extra text)
-      const jsonMatch = clean.match(/\{[\s\S]*\}/)
-      if (!jsonMatch) throw new Error('No JSON found in AI response')
+      // Find start of JSON object
+      const startIdx = clean.indexOf('{')
+      if (startIdx === -1) throw new Error('No JSON found in AI response')
 
-      const parsed = JSON.parse(jsonMatch[0])
+      // Try parsing directly first
+      let parsed = null
+      let jsonStr = clean.substring(startIdx)
+      try {
+        parsed = JSON.parse(jsonStr)
+      } catch {
+        // Response may be truncated — try to close open structures
+        // Count open braces/brackets to determine how many to close
+        let braces = 0, brackets = 0, inString = false, escape = false
+        for (const ch of jsonStr) {
+          if (escape) { escape = false; continue }
+          if (ch === '\\') { escape = true; continue }
+          if (ch === '"' && !escape) { inString = !inString; continue }
+          if (inString) continue
+          if (ch === '{') braces++
+          else if (ch === '}') braces--
+          else if (ch === '[') brackets++
+          else if (ch === ']') brackets--
+        }
+        // Close any open arrays then objects
+        let fixed = jsonStr
+        // Remove trailing incomplete string/value
+        fixed = fixed.replace(/,?\s*"[^"]*$/, '')  // remove incomplete key
+        fixed = fixed.replace(/,?\s*$/, '')          // remove trailing comma
+        for (let i = 0; i < brackets; i++) fixed += ']'
+        for (let i = 0; i < braces; i++) fixed += '}'
+        try {
+          parsed = JSON.parse(fixed)
+        } catch(e2) {
+          throw new Error('AI response could not be parsed. Try generating again.')
+        }
+      }
       setGenerated(parsed)
       setStep(3)
     } catch(e) {

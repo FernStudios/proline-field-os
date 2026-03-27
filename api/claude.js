@@ -57,7 +57,7 @@ export default async function handler(req) {
   const userMessage = body.messages?.[0]?.content || ''
   const geminiBody = {
     contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-    generationConfig: { maxOutputTokens: body.max_tokens || 4000, temperature: 0.3 },
+    generationConfig: { maxOutputTokens: body.max_tokens || 8000, temperature: 0.3 },
   }
 
   const errors = []
