@@ -69,7 +69,7 @@ export default function Admin() {
               <FormGroup label="Email"><Input type="email" value={company.coEmail} onChange={e=>setCompany(c=>({...c,coEmail:e.target.value}))} /></FormGroup>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <FormGroup label="License #"><Input value={company.license} onChange={e=>setCompany(c=>({...c,license:e.target.value}))} placeholder="SC-GC-009241" /></FormGroup>
+              <FormGroup label="License # (optional)" hint="Not required for all job types"><Input value={company.license} onChange={e=>setCompany(c=>({...c,license:e.target.value}))} placeholder="SC-GC-009241" /></FormGroup>
               <FormGroup label="Primary state"><Select value={company.primaryState} onChange={e=>setCompany(c=>({...c,primaryState:e.target.value}))}>{['SC','NC','GA','TN','VA'].map(s=><option key={s} value={s}>{s}</option>)}</Select></FormGroup>
             </div>
             <Button variant="primary" className="w-full mt-2" onClick={saveCompany}>Save company info</Button>

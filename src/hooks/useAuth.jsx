@@ -21,11 +21,15 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       if (session?.user) {
         loadFromSupabase(session.user.id)
         loadTemplateFromSupabase(session.user.id)
+        // On signup, initialize user data row in Supabase immediately
+        if (event === 'SIGNED_UP') {
+          syncToSupabase(session.user.id)
+        }
       }
     })
 
@@ -37,12 +41,9 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
-  const signUp = async (email, password, name, inviteCode) => {
-    const VALID_CODES = ['PROLINEBETA2026']
-    if (!VALID_CODES.includes(inviteCode?.toUpperCase().trim())) {
-      return { error: { message: 'Invalid or expired invite code.' } }
-    }
-    const { error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } })
+  const signUp = async (email, password, name) => {
+    // Beta: open signup — no invite code required
+    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name, plan: 'beta_free', planActivatedAt: new Date().toISOString() } } })
     return { error }
   }
 

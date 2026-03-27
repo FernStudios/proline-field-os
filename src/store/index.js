@@ -17,13 +17,13 @@ const INITIAL_STATE = {
   materials: [],
   audit: [],
   settings: {
-    coName: '',
-    coPhone: '',
-    coEmail: '',
-    coCity: '',
+    coName: 'Proline Gutter & Exteriors',
+    coPhone: '(864) 328-5581',
+    coEmail: 'Anarchyrebel4life@gmail.com',
+    coCity: 'Greenville',
     license: '',
     primaryState: 'SC',
-    tagline: '',
+    tagline: 'Quality work, guaranteed.',
     brandColor: '#0a3ef8',
     contractDefaults: {
       lateFee: 1.5,
@@ -33,18 +33,28 @@ const INITIAL_STATE = {
       governingState: 'SC',
       disputeMethod: 'mediation_arbitration',
       adminFee: 75,
+      coResponseDays: 5,
     },
     paymentConfig: {
       check: { enabled: true, handle: '' },
-      zelle: { enabled: true, handle: '' },
+      zelle: { enabled: true, handle: '(864) 328-5581' },
       ach: { enabled: false, handle: '' },
       venmo: { enabled: false, handle: '' },
       cashapp: { enabled: false, handle: '' },
+      paypal: { enabled: false, handle: '' },
     },
     jobTypes: [
-      { id: 'jt1', name: 'Gutter Installation', warrantyYrs: 5, color: '#0a3ef8' },
-      { id: 'jt2', name: 'Fascia & Soffit', warrantyYrs: 5, color: '#0a3ef8' },
-      { id: 'jt3', name: 'Gutter Guards', warrantyYrs: 7, color: '#0a3ef8' },
+      { id: 'jt1', name: 'Gutters — Install', warrantyYrs: 5 },
+      { id: 'jt2', name: 'Gutters — Repair', warrantyYrs: 2 },
+      { id: 'jt3', name: 'Gutters — Cleaning', warrantyYrs: 1 },
+      { id: 'jt4', name: 'Gutter Guards', warrantyYrs: 7 },
+      { id: 'jt5', name: 'Fascia & Soffit', warrantyYrs: 5 },
+      { id: 'jt6', name: 'Roofing', warrantyYrs: 5 },
+      { id: 'jt7', name: 'Siding', warrantyYrs: 5 },
+      { id: 'jt8', name: 'Windows & Doors', warrantyYrs: 3 },
+      { id: 'jt9', name: 'Decks', warrantyYrs: 3 },
+      { id: 'jt10', name: 'General Remodel', warrantyYrs: 2 },
+      { id: 'jt11', name: 'Other', warrantyYrs: 1 },
     ],
     adminSettings: { ownerName: 'Brandy Turner', ownerPayPct: 60, retainPct: 20 },
     brevo: '',
@@ -273,7 +283,17 @@ export const useStore = create(
         set(s => ({ ...s, jobs, invoices, _nextCon: 1001, _nextCO: 1001, _nextInv: 1003 }))
       },
 
-      reset: () => set(INITIAL_STATE),
+      reset: () => {
+        // Preserve settings, template, and auth state — only wipe operational data
+        const s = get()
+        set({
+          ...INITIAL_STATE,
+          settings: s.settings,            // keep company info, job types, contract defaults
+          contractTemplate: s.contractTemplate,
+          contractTemplateMeta: s.contractTemplateMeta,
+          isDemoMode: s.isDemoMode,
+        })
+      },
     }),
     {
       name: 'proline-fieldos-v1',

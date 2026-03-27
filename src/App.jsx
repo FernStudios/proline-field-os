@@ -48,7 +48,7 @@ function LandingOrApp() {
       <div className="w-8 h-8 border-2 border-gray-200 border-t-navy rounded-full animate-spin" />
     </div>
   )
-  if (user || demo) return <Navigate to="/jobs" replace />
+  if (user || demo) return <Navigate to="/dashboard" replace />
   return <Landing />
 }
 
@@ -84,6 +84,7 @@ function AppRoutes() {
         <AuthGuard>
           <AppShell>
             <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/app" element={<Dashboard />} />
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/jobs/:jobId" element={<JobDetail />} />
@@ -107,7 +108,7 @@ function AppRoutes() {
               <Route path="/crew" element={<CrewView />} />
               <Route path="/jobs/:jobId/materials" element={<Materials />} />
               <Route path="/jobs/:jobId/comms" element={<CommLog />} />
-              <Route path="*" element={<Navigate to="/jobs" replace />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </AppShell>
         </AuthGuard>

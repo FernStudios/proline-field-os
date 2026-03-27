@@ -23,7 +23,7 @@ export default function AuthPage() {
     if (mode === 'login') {
       const { error } = await signIn(form.email, form.password)
       if (error) { setError(error.message); setLoading(false); return }
-      navigate('/')
+      navigate('/dashboard')
     } else if (mode === 'register') {
       if (!form.name || !form.email || !form.password || !form.invite) {
         setError('All fields are required including the invite code.')
@@ -31,7 +31,7 @@ export default function AuthPage() {
       }
       const { error } = await signUp(form.email, form.password, form.name, form.invite)
       if (error) { setError(error.message); setLoading(false); return }
-      navigate('/')
+      navigate('/dashboard')
     } else {
       const { error } = await resetPassword(form.email)
       if (error) { setError(error.message); setLoading(false); return }
@@ -40,7 +40,7 @@ export default function AuthPage() {
     setLoading(false)
   }
 
-  const demoMode = () => { loadDemoData(); navigate('/') }
+  const demoMode = () => { loadDemoData(); navigate('/dashboard') }
 
   return (
     <div className="min-h-screen bg-navy flex flex-col items-center justify-center px-5 py-10">
