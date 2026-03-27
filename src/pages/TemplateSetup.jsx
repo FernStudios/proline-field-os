@@ -356,18 +356,108 @@ Return ONLY valid JSON, no markdown:
               <div className="space-y-3">
                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
                   <p className="font-semibold text-sm text-emerald-800">Template generated</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Trade-specific language is ready for your contracts</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Review all sections below, then save when ready.</p>
                 </div>
-                <div className="card text-sm space-y-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">What was generated</p>
-                  <p className="text-xs text-gray-600">Scope boilerplate for {generated.tradeLabel} work</p>
-                  <p className="text-xs text-gray-600">{generated.scopeTemplates?.length || 0} scope templates for common job types</p>
-                  <p className="text-xs text-gray-600">{generated.maintenanceTemplates?.length || 0} maintenance requirement sets (warranty conditions)</p>
-                  <p className="text-xs text-gray-600">{generated.warrantyExclusions?.length || 0} warranty exclusions specific to {generated.tradeLabel}</p>
-                  <p className="text-xs text-gray-600">{generated.commonChangeOrders?.length || 0} pre-written change order scenarios</p>
+
+                {/* Attorney review notice */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  <p className="text-xs font-semibold text-amber-800 mb-1">⚖️ Attorney review recommended</p>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    Review all language below with your attorney before using in contracts. This AI-generated language is a starting point — your attorney should confirm it is appropriate for your state and trade.
+                  </p>
                 </div>
-                <Button variant="primary" className="w-full" onClick={saveTemplate}>Save template to my account</Button>
-                <Button variant="ghost" className="w-full" onClick={() => { setGenerated(null); generate() }}>Regenerate</Button>
+
+                {/* Scope boilerplate */}
+                <details className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+                    <span className="font-semibold text-sm text-navy">Scope boilerplate</span>
+                    <span className="text-xs text-gray-400">Tap to expand ›</span>
+                  </summary>
+                  <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                    <p className="text-xs text-gray-500 mb-2 leading-relaxed italic">This appears at the top of every scope of work section.</p>
+                    <p className="text-xs text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 font-mono whitespace-pre-wrap">{generated.scopeBoilerplate}</p>
+                  </div>
+                </details>
+
+                {/* Scope templates */}
+                {(generated.scopeTemplates || []).map((t, i) => (
+                  <details key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+                      <div>
+                        <span className="font-semibold text-sm text-navy">{t.jobType}</span>
+                        <span className="text-xs text-gray-400 ml-2">Scope template</span>
+                      </div>
+                      <span className="text-xs text-gray-400">›</span>
+                    </summary>
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                      <p className="text-xs text-gray-500 mb-2 italic">Variables in {'{{'} double brackets {'}'} are filled in by the contract wizard.</p>
+                      <p className="text-xs text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{t.scope}</p>
+                    </div>
+                  </details>
+                ))}
+
+                {/* Warranty conditions / maintenance */}
+                {(generated.maintenanceTemplates || []).map((t, i) => (
+                  <details key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+                      <div>
+                        <span className="font-semibold text-sm text-navy">{t.jobType}</span>
+                        <span className="text-xs text-gray-400 ml-2">Warranty conditions</span>
+                      </div>
+                      <span className="text-xs text-gray-400">›</span>
+                    </summary>
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                      <p className="text-xs text-gray-500 mb-2 italic">Customer must follow these to keep their warranty valid.</p>
+                      <p className="text-xs text-gray-700 leading-relaxed bg-gray-50 rounded-lg p-3 whitespace-pre-wrap">{Array.isArray(t.requirements) ? t.requirements.join('\n\n') : t.requirements}</p>
+                    </div>
+                  </details>
+                ))}
+
+                {/* Warranty exclusions */}
+                {(generated.warrantyExclusions || []).length > 0 && (
+                  <details className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+                      <span className="font-semibold text-sm text-navy">Warranty exclusions ({generated.warrantyExclusions.length})</span>
+                      <span className="text-xs text-gray-400">›</span>
+                    </summary>
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-2">
+                      <p className="text-xs text-gray-500 mb-2 italic">These conditions void the warranty if present at the time of work.</p>
+                      {generated.warrantyExclusions.map((ex, i) => (
+                        <div key={i} className="text-xs text-gray-700 bg-gray-50 rounded-lg p-2.5">
+                          <span className="font-medium">{typeof ex === 'string' ? ex : ex.condition || ex}</span>
+                          {ex.explanation && <p className="text-gray-500 mt-0.5">{ex.explanation}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
+
+                {/* Change order scenarios */}
+                {(generated.commonChangeOrders || []).map((co, i) => (
+                  <details key={i} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <summary className="flex items-center justify-between px-4 py-3 cursor-pointer select-none">
+                      <div>
+                        <span className="font-semibold text-sm text-navy">CO scenario {i + 1}</span>
+                        <span className={cn('text-xs ml-2', co.type === 'required_a' ? 'text-red-500' : co.type === 'required_b' ? 'text-amber-500' : 'text-blue-500')}>
+                          {co.type === 'required_a' ? 'Life/safety' : co.type === 'required_b' ? 'Warranty impact' : 'Customer request'}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-400">›</span>
+                    </summary>
+                    <div className="px-4 pb-4 border-t border-gray-100 pt-3 space-y-2 text-xs">
+                      <p className="text-gray-500 italic">{co.scenario}</p>
+                      {co.descriptionTemplate && <div className="bg-gray-50 rounded-lg p-2.5"><p className="text-gray-400 text-[10px] font-semibold mb-1">DESCRIPTION</p><p className="text-gray-700">{co.descriptionTemplate}</p></div>}
+                      {co.conditionTemplate && <div className="bg-gray-50 rounded-lg p-2.5"><p className="text-gray-400 text-[10px] font-semibold mb-1">CONDITION</p><p className="text-gray-700">{co.conditionTemplate}</p></div>}
+                      {co.correctiveTemplate && <div className="bg-gray-50 rounded-lg p-2.5"><p className="text-gray-400 text-[10px] font-semibold mb-1">CORRECTIVE WORK</p><p className="text-gray-700">{co.correctiveTemplate}</p></div>}
+                      {co.consequenceTemplate && <div className="bg-gray-50 rounded-lg p-2.5"><p className="text-gray-400 text-[10px] font-semibold mb-1">CONSEQUENCE IF DECLINED</p><p className="text-gray-700">{co.consequenceTemplate}</p></div>}
+                    </div>
+                  </details>
+                ))}
+
+                <div className="flex gap-2 pt-2">
+                  <Button variant="primary" className="flex-1" onClick={saveTemplate}>Save template</Button>
+                  <Button variant="ghost" className="flex-1" onClick={() => { setGenerated(null); generate() }}>Regenerate</Button>
+                </div>
               </div>
             )}
           </div>
