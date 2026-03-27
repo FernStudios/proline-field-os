@@ -7,7 +7,7 @@ import { TopNav } from '../components/layout/AppShell'
 import { Button, FormGroup, Input, Select, Textarea, SectionTitle, Modal } from '../components/ui'
 import { toast } from '../components/ui'
 
-const TABS = ['Company','Job types','Contracts','Payroll','Branding']
+const TABS = ['Company','Job types','Contracts','Payroll','Roles','Branding']
 
 export default function Admin() {
   const navigate = useNavigate()
@@ -150,6 +150,40 @@ export default function Admin() {
           </div>
         )}
 
+        {tab === 'Roles' && (
+          <div className="space-y-4 pt-1">
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Customize what each role can access in your account.
+              Owner always has full access and cannot be restricted.
+            </p>
+            {['office','foreman','crew'].map(role => {
+              const meta = {
+                office:  { icon: '💼', label: 'Office',  desc: 'Administrative staff' },
+                foreman: { icon: '🦺', label: 'Foreman', desc: 'Field supervisors' },
+                crew:    { icon: '👷', label: 'Crew',    desc: 'Field workers' },
+              }[role]
+              const perms = rolePermissions?.[role] || {}
+              const count = Object.values(perms).filter(Boolean).length
+              return (
+                <button key={role} onClick={() => navigate('/role-permissions')}
+                  className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">{meta.icon}</span>
+                    <div className="text-left">
+                      <p className="font-semibold text-sm text-navy">{meta.label}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{meta.desc} · {count} permissions on</p>
+                    </div>
+                  </div>
+                  <span className="text-gray-300 text-sm">›</span>
+                </button>
+              )
+            })}
+            <button onClick={() => navigate('/role-permissions')}
+              className="w-full py-3 bg-navy text-white text-sm font-semibold rounded-xl">
+              Configure role permissions →
+            </button>
+          </div>
+        )}
         {tab === 'Branding' && (
           <div className="space-y-3">
             <SectionTitle>Brand settings</SectionTitle>

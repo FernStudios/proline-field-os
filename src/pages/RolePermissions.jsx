@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 import { useStore } from '../store'
 import { TopNav } from '../components/layout/AppShell'
 import { SectionTitle } from '../components/ui'
@@ -15,13 +16,11 @@ const ROLES = [
 export default function RolePermissions() {
   const navigate = useNavigate()
   const { rolePermissions, setRolePermission, updateRolePermissions, syncToSupabase } = useStore()
-  const { user } = { user: null } // can't use hooks here — passed via store
+  const { user } = useAuth()
 
   const save = async () => {
-    // Sync to Supabase
-    const userId = JSON.parse(localStorage.getItem('sb-jlqiiofhjudgezzbnxkc-auth-token') || '{}')?.user?.id
-    if (userId && syncToSupabase) {
-      await syncToSupabase(userId)
+    if (user?.id && syncToSupabase) {
+      await syncToSupabase(user.id)
       toast('Role permissions saved')
     } else {
       toast('Saved locally')

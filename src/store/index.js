@@ -142,7 +142,6 @@ const INITIAL_STATE = {
     renewalDate: null,         // ISO date — next renewal
     canceledAt: null,          // ISO date — if canceled
   },
-  _nextEst: 1001,
 }
 
 export const useStore = create(
