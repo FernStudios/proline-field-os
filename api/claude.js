@@ -1,17 +1,27 @@
 // api/claude.js — Vercel Edge Function
-// Calls Gemini API for AI template generation
-
 export const config = { runtime: 'edge' }
 
+const MODELS_TO_TRY = [
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-lite',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-latest',
+  'gemini-1.5-flash-001',
+  'gemini-1.5-flash-002',
+  'gemini-1.5-pro',
+  'gemini-1.5-pro-latest',
+  'gemini-1.0-pro',
+]
+
 export default async function handler(req) {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  }
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    })
+    return new Response(null, { headers: corsHeaders })
   }
 
   if (req.method !== 'POST') {
@@ -22,79 +32,66 @@ export default async function handler(req) {
   if (!geminiKey) {
     return new Response(JSON.stringify({
       content: [{ type: 'text', text: '' }],
-      error: 'GEMINI_API_KEY not configured in Vercel env vars'
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    })
+      error: 'GEMINI_API_KEY not set in Vercel environment variables'
+    }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
+  let body
   try {
-    const body = await req.json()
-    const userMessage = body.messages?.[0]?.content || ''
+    body = await req.json()
+  } catch {
+    return new Response(JSON.stringify({ content: [{ type: 'text', text: '' }], error: 'Invalid JSON body' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
 
-    const geminiBody = {
-      contents: [{ role: 'user', parts: [{ text: userMessage }] }],
-      generationConfig: {
-        maxOutputTokens: body.max_tokens || 3000,
-        temperature: 0.3,
-      },
+  // Diagnostic: list available models
+  if (body._listModels) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`)
+      const d = await r.json()
+      const names = (d.models || []).map(m => m.name).filter(n => n.includes('gemini'))
+      return new Response(JSON.stringify({ models: names, error: d.error?.message }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    } catch(e) {
+      return new Response(JSON.stringify({ error: e.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
+  }
 
-    // Try models in order — gemini-1.5-flash first, then fallbacks
-    const models = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-pro']
-    let geminiData = null
-    let lastError = null
+  const userMessage = body.messages?.[0]?.content || ''
+  const geminiBody = {
+    contents: [{ role: 'user', parts: [{ text: userMessage }] }],
+    generationConfig: { maxOutputTokens: body.max_tokens || 4000, temperature: 0.3 },
+  }
 
-    for (const model of models) {
+  const errors = []
+
+  for (const model of MODELS_TO_TRY) {
+    try {
       const resp = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(geminiBody),
-        }
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(geminiBody) }
       )
-
       const data = await resp.json()
 
       if (resp.ok && data.candidates?.[0]?.content?.parts?.[0]?.text) {
-        geminiData = data
-        break
+        const text = data.candidates[0].content.parts[0].text
+        return new Response(JSON.stringify({
+          content: [{ type: 'text', text }],
+          model_used: model,
+          usage: { input_tokens: 0, output_tokens: 0 },
+        }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      lastError = { model, status: resp.status, error: data.error?.message || JSON.stringify(data) }
+      errors.push({ model, status: resp.status, msg: data.error?.message || 'no candidates' })
+    } catch (e) {
+      errors.push({ model, status: 'throw', msg: e.message })
     }
-
-    if (!geminiData) {
-      // All models failed — return the error so frontend can show it
-      return new Response(JSON.stringify({
-        content: [{ type: 'text', text: '' }],
-        error: lastError?.error || 'All Gemini models failed',
-        debug: lastError,
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-      })
-    }
-
-    const text = geminiData.candidates[0].content.parts[0].text
-
-    return new Response(JSON.stringify({
-      content: [{ type: 'text', text }],
-      usage: { input_tokens: 0, output_tokens: 0 },
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    })
-
-  } catch (err) {
-    return new Response(JSON.stringify({
-      content: [{ type: 'text', text: '' }],
-      error: err.message,
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    })
   }
+
+  return new Response(JSON.stringify({
+    content: [{ type: 'text', text: '' }],
+    error: `All Gemini models failed. First error: ${errors[0]?.msg}`,
+    errors,
+  }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 }
