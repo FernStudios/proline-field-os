@@ -313,21 +313,29 @@ export const useStore = create(
       syncToSupabase: async (userId) => {
         if (!supabase || !userId) return
         const state = get()
-        const payload = {
+        const row = {
+          user_id: userId,
           db: {
             jobs: state.jobs, contracts: state.contracts, changeOrders: state.changeOrders,
             invoices: state.invoices, expenses: state.expenses, crew: state.crew,
-            payrollRuns: state.payrollRuns, contacts: state.contacts, leads: state.leads, estimates: state.estimates, schemaVersion: 2,
-            supportTickets: state.supportTickets || [], accountTeam: state.accountTeam || [], subscription: state.subscription || {},
+            payrollRuns: state.payrollRuns, contacts: state.contacts, leads: state.leads,
+            estimates: state.estimates, schemaVersion: 2,
+            supportTickets: state.supportTickets || [],
+            accountTeam: state.accountTeam || [],
+            subscription: state.subscription || {},
             rolePermissions: state.rolePermissions,
             customDocuments: state.customDocuments || [],
-            materials: state.materials, settings: state.settings,
+            materials: state.materials,
+            settings: state.settings,
             _nextCon: state._nextCon, _nextCO: state._nextCO, _nextInv: state._nextInv,
           },
           profile: { name: state.settings.adminSettings?.ownerName || '' },
-          updatedAt: new Date().toISOString(),
         }
-        await supabase.from('user_data').upsert({ user_id: userId, ...payload })
+        // onConflict ensures upsert works on the user_id unique key
+        const { error } = await supabase
+          .from('user_data')
+          .upsert(row, { onConflict: 'user_id' })
+        if (error) console.warn('Supabase sync error:', error.message, error.code)
       },
 
       loadFromSupabase: async (userId) => {
