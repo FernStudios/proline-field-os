@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { printTemplate } from '../lib/templatePrint'
-import { printDocumentPacket } from '../lib/documentPacketPrint'
+import { generateAndDownloadPacket } from '../lib/generateDocxPacket'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
@@ -371,9 +371,9 @@ Return ONLY valid JSON, no markdown:
 
                 {/* Print / export button */}
                 <button
-                  onClick={() => printDocumentPacket(generated, settings)}
+                  onClick={() => generateAndDownloadPacket(generated, settings)}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-navy text-white font-semibold text-sm rounded-xl">
-                  🖨 Print full document packet for attorney
+                  ⬇ Download full document packet (.docx)
                 </button>
 
                 {/* Scope boilerplate */}

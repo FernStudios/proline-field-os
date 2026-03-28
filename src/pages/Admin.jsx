@@ -4,7 +4,7 @@ import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { cn } from '../lib/utils'
 import { printTemplate } from '../lib/templatePrint'
-import { printDocumentPacket } from '../lib/documentPacketPrint'
+import { generateAndDownloadPacket } from '../lib/generateDocxPacket'
 import { TopNav } from '../components/layout/AppShell'
 import { Button, FormGroup, Input, Select, Textarea, SectionTitle, Modal } from '../components/ui'
 import { toast } from '../components/ui'
@@ -163,9 +163,9 @@ export default function Admin() {
                       Review the language with your attorney, then unlock when ready.
                     </p>
                     <div className="flex gap-2">
-                      <button onClick={() => printDocumentPacket(contractTemplate, settings)}
+                      <button onClick={() => generateAndDownloadPacket(contractTemplate, settings)}
                         className="flex-1 text-xs font-semibold text-white bg-navy rounded-lg py-2">
-                        🖨 Print full document packet
+                        ⬇ Download attorney review packet (.docx)
                       </button>
                       <button onClick={() => setShowUnlock(true)}
                         className="flex-1 text-xs font-semibold text-white bg-navy rounded-lg py-2">
@@ -254,9 +254,9 @@ export default function Admin() {
                         ? `Reviewed by ${contractTemplateMeta.reviewedBy || 'attorney'} on ${contractTemplateMeta.reviewDate ? new Date(contractTemplateMeta.reviewDate).toLocaleDateString() : '—'}. This template is active and in use.`
                         : 'Self-authorized without attorney review. Template is active. Consider having an attorney review before using in customer contracts.'}
                     </p>
-                    <button onClick={() => printDocumentPacket(contractTemplate, settings)}
+                    <button onClick={() => generateAndDownloadPacket(contractTemplate, settings)}
                       className="w-full text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg py-2 hover:border-gray-300">
-                      🖨 Print full document packet
+                      ⬇ Download attorney review packet (.docx)
                     </button>
                   </div>
                 )}
