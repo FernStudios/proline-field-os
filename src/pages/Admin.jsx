@@ -3,8 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { cn } from '../lib/utils'
-import { printTemplate } from '../lib/templatePrint'
-import { generateAndDownloadPacket } from '../lib/generateDocxPacket'
 import { TopNav } from '../components/layout/AppShell'
 import { Button, FormGroup, Input, Select, Textarea, SectionTitle, Modal } from '../components/ui'
 import { toast } from '../components/ui'
@@ -14,13 +12,8 @@ const TABS = ['Company','Job types','Contracts','Payroll','Roles','Branding']
 export default function Admin() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
-  const [showUnlock, setShowUnlock] = useState(false)
-  const [unlockType, setUnlockType] = useState(null) // 'attorney' | 'self'
-  const [attorneyName, setAttorneyName] = useState('')
-  const [reviewDate, setReviewDate] = useState(new Date().toISOString().split('T')[0])
-  const [acceptedDisclaimer, setAcceptedDisclaimer] = useState(false)
   const [tab, setTab] = useState(params.get('tab') || 'Company')
-  const { settings, updateSettings, updateContractDefaults, reset, syncToSupabase, contractTemplate, contractTemplateMeta, rolePermissions, unlockTemplate, accountTeam } = useStore()
+  const { settings, updateSettings, updateContractDefaults, reset, syncToSupabase, contractTemplate, contractTemplateMeta, rolePermissions, accountTeam } = useStore()
   const { signOut, user } = useAuth()
 
   const co = settings || {}
@@ -116,158 +109,32 @@ export default function Admin() {
         {tab === 'Contracts' && (
           <div className="space-y-3">
 
-            {/* Template status card */}
-            {!contractTemplateMeta ? (
-              <div className="bg-navy rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-white text-sm">No AI template</p>
-                  <p className="text-white/50 text-xs mt-0.5">Generate trade-specific scope, warranty & CO language</p>
-                </div>
-                <button onClick={() => navigate('/template-setup')}
-                  className="text-xs font-bold text-white bg-brand rounded-lg px-3 py-1.5 flex-shrink-0">
-                  Set up
+            {/* Contract wizard is always available */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+              <p className="font-semibold text-sm text-emerald-800 mb-1">✓ Contract wizard is ready</p>
+              <p className="text-xs text-emerald-700 leading-relaxed">
+                Create contracts from any job's Documents tab. The wizard generates a full 14-article residential construction contract with your company info, scope, and payment terms.
+              </p>
+            </div>
+
+            {/* Custom contract templates */}
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <p className="font-semibold text-sm text-navy mb-1">📁 Custom contract templates</p>
+              <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+                Upload your own attorney-approved contract as a template in the Document Vault. It will be available to reference when creating contracts for jobs.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => navigate('/documents')}
+                  className="flex-1 py-2.5 bg-navy text-white text-xs font-semibold rounded-xl">
+                  Document Vault →
+                </button>
+                <button onClick={() => navigate('/documents')}
+                  className="flex-1 py-2.5 border border-gray-200 text-gray-600 text-xs font-semibold rounded-xl">
+                  Document Vault
                 </button>
               </div>
-            ) : (
-              <div className={cn('rounded-xl border-2 p-4', contractTemplateMeta.status === 'active' ? 'border-emerald-300 bg-emerald-50' : contractTemplateMeta.status === 'active_unreviewed' ? 'border-amber-300 bg-amber-50' : 'border-gray-200 bg-gray-50')}>
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn('text-xs font-bold px-2 py-0.5 rounded-full', contractTemplateMeta.status === 'active' ? 'bg-emerald-100 text-emerald-800' : contractTemplateMeta.status === 'active_unreviewed' ? 'bg-amber-100 text-amber-800' : 'bg-gray-200 text-gray-600')}>
-                        {contractTemplateMeta.status === 'active' ? '✓ Active — attorney reviewed' : contractTemplateMeta.status === 'active_unreviewed' ? '⚠ Active — self-authorized' : '🔒 Draft — not yet active'}
-                      </span>
-                    </div>
-                    <p className="font-semibold text-sm text-navy mt-1.5">{contractTemplateMeta.trade || 'AI template'}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      Generated {contractTemplateMeta.generatedAt ? new Date(contractTemplateMeta.generatedAt).toLocaleDateString() : '—'}
-                      {contractTemplateMeta.status !== 'draft' && contractTemplateMeta.unlockedAt && ` · Unlocked ${new Date(contractTemplateMeta.unlockedAt).toLocaleDateString()}`}
-                      {contractTemplateMeta.reviewType === 'attorney' && contractTemplateMeta.reviewedBy && ` · ${contractTemplateMeta.reviewedBy}`}
-                    </p>
-                    <div className="flex gap-3 mt-1.5 text-xs text-gray-500">
-                      <span>{contractTemplate?.scopeTemplates?.length || 0} scope templates</span>
-                      <span>{contractTemplate?.warrantyExclusions?.length || 0} warranty exclusions</span>
-                      <span>{contractTemplate?.commonChangeOrders?.length || 0} CO scenarios</span>
-                    </div>
-                  </div>
-                  <button onClick={() => navigate('/template-setup')}
-                    className="text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white flex-shrink-0">
-                    Regenerate
-                  </button>
-                </div>
-
-                {/* Draft state — show unlock options */}
-                {contractTemplateMeta.status === 'draft' && !showUnlock && (
-                  <div className="mt-3 pt-3 border-t border-gray-200">
-                    <p className="text-xs text-gray-600 mb-2 leading-relaxed">
-                      This template is saved but <strong>not active</strong>. Contracts will use generic language until you unlock it.
-                      Review the language with your attorney, then unlock when ready.
-                    </p>
-                    <div className="flex gap-2">
-                      <button onClick={() => generateAndDownloadPacket(contractTemplate, settings)}
-                        className="flex-1 text-xs font-semibold text-white bg-navy rounded-lg py-2">
-                        ⬇ Download attorney review packet (.docx)
-                      </button>
-                      <button onClick={() => setShowUnlock(true)}
-                        className="flex-1 text-xs font-semibold text-white bg-navy rounded-lg py-2">
-                        Unlock for use →
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Unlock modal inline */}
-                {showUnlock && contractTemplateMeta.status === 'draft' && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-3">
-                    <p className="text-xs font-semibold text-gray-700">How would you like to activate this template?</p>
-
-                    {/* Option 1: Attorney reviewed */}
-                    <button onClick={() => { setUnlockType('attorney'); setAcceptedDisclaimer(false) }}
-                      className={cn('w-full text-left p-3 rounded-xl border-2 transition-colors', unlockType === 'attorney' ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 bg-white')}>
-                      <p className="font-semibold text-sm text-navy">✅ Attorney reviewed</p>
-                      <p className="text-xs text-gray-500 mt-0.5">My attorney has reviewed and approved this language</p>
-                    </button>
-
-                    {/* Option 2: Self-authorize */}
-                    <button onClick={() => { setUnlockType('self'); setAcceptedDisclaimer(false) }}
-                      className={cn('w-full text-left p-3 rounded-xl border-2 transition-colors', unlockType === 'self' ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-white')}>
-                      <p className="font-semibold text-sm text-navy">⚠ Use at my own risk</p>
-                      <p className="text-xs text-gray-500 mt-0.5">I accept the disclaimer and will use without attorney review</p>
-                    </button>
-
-                    {/* Attorney fields */}
-                    {unlockType === 'attorney' && (
-                      <div className="space-y-2 bg-white rounded-xl border border-gray-100 p-3">
-                        <FormGroup label="Attorney name">
-                          <Input value={attorneyName} onChange={e => setAttorneyName(e.target.value)} placeholder="e.g. John Smith, Esq." />
-                        </FormGroup>
-                        <FormGroup label="Review date">
-                          <Input type="date" value={reviewDate} onChange={e => setReviewDate(e.target.value)} />
-                        </FormGroup>
-                        <button
-                          onClick={() => { if (!attorneyName.trim()) { toast('Enter your attorney name', 'error'); return }; unlockTemplate('attorney', attorneyName.trim(), reviewDate); setShowUnlock(false); setUnlockType(null); toast('Template unlocked — attorney reviewed'); doSync() }}
-                          className="w-full py-2.5 bg-emerald-600 text-white text-xs font-bold rounded-xl">
-                          Activate — attorney reviewed ✓
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Self-authorize fields */}
-                    {unlockType === 'self' && (
-                      <div className="space-y-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-                        <p className="text-xs font-bold text-amber-800">⚠ Legal disclaimer — read carefully</p>
-                        <p className="text-xs text-amber-800 leading-relaxed">
-                          This AI-generated contract language has <strong>NOT been reviewed by a licensed attorney</strong>. By activating, you acknowledge:
-                          (1) This is not legal advice. (2) You are using this language entirely at your own risk.
-                          (3) Proline Field OS and its creators bear no liability for any legal issues arising from use of unreviewed contract language.
-                          (4) You are strongly encouraged to have a licensed attorney in your state review these provisions before using them in contracts with customers.
-                        </p>
-                        <label className="flex items-start gap-2 cursor-pointer">
-                          <input type="checkbox" checked={acceptedDisclaimer} onChange={e => setAcceptedDisclaimer(e.target.checked)}
-                            className="mt-0.5 flex-shrink-0" />
-                          <span className="text-xs text-amber-800 font-medium leading-relaxed">
-                            I have read and accept the above disclaimer. I understand this is not legal advice and I am using this language at my own risk.
-                          </span>
-                        </label>
-                        <button
-                          disabled={!acceptedDisclaimer}
-                          onClick={() => { if (!acceptedDisclaimer) return; unlockTemplate('self', 'Self-authorized', new Date().toISOString().split('T')[0]); setShowUnlock(false); setUnlockType(null); setAcceptedDisclaimer(false); toast('Template activated — use at your own risk') }}
-                          className={cn('w-full py-2.5 text-xs font-bold rounded-xl transition-colors', acceptedDisclaimer ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed')}>
-                          Activate without attorney review
-                        </button>
-                      </div>
-                    )}
-
-                    {unlockType && (
-                      <button onClick={() => { setShowUnlock(false); setUnlockType(null); setAcceptedDisclaimer(false) }}
-                        className="w-full text-xs text-gray-400 py-1.5">
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {/* Active states — can re-lock or regenerate */}
-                {(contractTemplateMeta.status === 'active' || contractTemplateMeta.status === 'active_unreviewed') && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      {contractTemplateMeta.status === 'active'
-                        ? `Reviewed by ${contractTemplateMeta.reviewedBy || 'attorney'} on ${contractTemplateMeta.reviewDate ? new Date(contractTemplateMeta.reviewDate).toLocaleDateString() : '—'}. This template is active and in use.`
-                        : 'Self-authorized without attorney review. Template is active. Consider having an attorney review before using in customer contracts.'}
-                    </p>
-                    <button onClick={() => generateAndDownloadPacket(contractTemplate, settings)}
-                      className="w-full text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg py-2 hover:border-gray-300">
-                      ⬇ Download attorney review packet (.docx)
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Template credit policy */}
-            <div className="bg-gray-50 rounded-xl p-3">
-              <p className="text-xs font-semibold text-gray-600 mb-1">Template credits</p>
-              <p className="text-xs text-gray-500 leading-relaxed">Each plan includes 3 template generations per month. Additional generations are $1.00 each.</p>
             </div>
+
             <SectionTitle>Contract defaults</SectionTitle>
             <div className="grid grid-cols-2 gap-3">
               <FormGroup label="Late fee (%/mo)" hint="Default 1.5% = 18%/yr"><Input type="number" step="0.1" value={contractSettings.lateFee} onChange={e=>setContractSettings(c=>({...c,lateFee:parseFloat(e.target.value)||1.5}))} /></FormGroup>
@@ -285,6 +152,26 @@ export default function Admin() {
               </Select>
             </FormGroup>
             <Button variant="primary" className="w-full mt-2" onClick={saveContracts}>Save contract defaults</Button>
+
+            {/* AI template - available but not required */}
+            <div className="mt-2 bg-gray-50 border border-gray-200 rounded-xl p-4">
+              <p className="font-semibold text-xs text-gray-600 mb-1">AI contract template (optional)</p>
+              <p className="text-xs text-gray-400 mb-2 leading-relaxed">
+                Generate trade-specific scope language, warranty conditions, and pre-written change order scenarios. Optional — the contract wizard works without it.
+              </p>
+              {contractTemplateMeta ? (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600">
+                    {contractTemplateMeta.trade} template — {contractTemplateMeta.status === 'active' ? '✓ active' : 'draft'}
+                  </span>
+                  <button onClick={() => navigate('/template-setup')}
+                    className="text-xs font-semibold text-brand">Manage</button>
+                </div>
+              ) : (
+                <button onClick={() => navigate('/template-setup')}
+                  className="text-xs font-semibold text-gray-500 underline">Set up AI template</button>
+              )}
+            </div>
           </div>
         )}
 

@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { printTemplate } from '../lib/templatePrint'
-import { generateAndDownloadPacket } from '../lib/generateDocxPacket'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
@@ -370,11 +368,10 @@ Return ONLY valid JSON, no markdown:
                 </div>
 
                 {/* Print / export button */}
-                <button
-                  onClick={() => generateAndDownloadPacket(generated, settings)}
-                  className="w-full flex items-center justify-center gap-2 py-3 bg-navy text-white font-semibold text-sm rounded-xl">
-                  ⬇ Download full document packet (.docx)
-                </button>
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-700 leading-relaxed">
+                  <p className="font-semibold mb-1">📋 Attorney review</p>
+                  After saving, go to <strong>Admin → Contracts</strong> to unlock this template for use. You can also upload your own attorney-approved contracts in the Document Vault.
+                </div>
 
                 {/* Scope boilerplate */}
                 <details className="bg-white border border-gray-200 rounded-xl overflow-hidden">
