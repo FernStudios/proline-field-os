@@ -4,7 +4,7 @@
 import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   Header, Footer, AlignmentType, HeadingLevel, BorderStyle, WidthType,
-  ShadingType, UnderlineType, PageNumber, NumberFormat
+  ShadingType, UnderlineType, PageNumber
 } from 'docx'
 import { generateContractText, generateCO02Text, generateCO03AText, generateCO03BText } from './contractText'
 import { generateEstimateText, generateLienWaiverText } from './estimateText'
@@ -414,7 +414,7 @@ export async function generateAndDownloadPacket(contractTemplate, settings) {
             children: [
               run('DRAFT — NOT FOR EXECUTION', { font: 'Arial', size: 8, color: AMBER }),
               new TextRun({ text: '\tPage ', font: 'Arial', size: PT(9), color: GRAY }),
-              new PageNumber({ font: 'Arial', size: PT(9), color: GRAY }),
+              new TextRun({ children: [PageNumber.CURRENT], font: 'Arial', size: PT(9), color: GRAY }),
             ],
           }),
         ]}),
