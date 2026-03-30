@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
+import { buildMergeData, applyMergeFields } from '../../lib/mergeFields'
 import { generateCO02Text, generateCO03AText, generateCO03BText } from '../../lib/contractText'
 import { TopNav } from '../../components/layout/AppShell'
 import { Button, Modal } from '../../components/ui'
@@ -9,7 +10,7 @@ import { toast } from '../../components/ui'
 export default function COPreview() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { addChangeOrder, updateJob, jobs } = useStore()
+  const { addChangeOrder, updateJob, jobs , customTemplates } = useStore()
   const [showGate, setShowGate] = useState(true)
   const [ackOption, setAckOption] = useState('')
   const [ackName, setAckName] = useState('')
@@ -17,6 +18,12 @@ export default function COPreview() {
   const editRef = useRef(null)
   const d = JSON.parse(sessionStorage.getItem('coWizardData') || '{}')
   const [generatedText] = useState(() => {
+    const tplKey = d.coType === 'customer' ? 'co_02' : d.coType === 'required_a' ? 'co_03a' : 'co_03b'
+    const customTpl = customTemplates?.[tplKey]
+    if (customTpl?.text) {
+      const mergeData = buildMergeData(null, d, settings)
+      return applyMergeFields(customTpl.text, mergeData)
+    }
     if (d.coType === 'customer') return generateCO02Text(d)
     if (d.coType === 'required_a') return generateCO03AText(d)
     return generateCO03BText(d)

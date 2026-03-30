@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
 import { generateEstimateText } from '../../lib/estimateText'
+import { buildMergeData, applyMergeFields } from '../../lib/mergeFields'
 import { TopNav } from '../../components/layout/AppShell'
 import { Button } from '../../components/ui'
 import { toast } from '../../components/ui'
@@ -10,7 +11,7 @@ import { uid } from '../../lib/utils'
 export default function EstimatePreview() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { settings, addEstimate, updateJob } = useStore()
+  const { settings, addEstimate, updateJob, customTemplates } = useStore()
   const [wasEdited, setWasEdited] = useState(false)
   const editRef = useRef(null)
   const d = (() => {
@@ -23,7 +24,14 @@ export default function EstimatePreview() {
       return {}
     }
   })()
-  const [generatedText] = useState(() => generateEstimateText(d, settings))
+  const [generatedText] = useState(() => {
+    const customTpl = customTemplates?.estimate
+    if (customTpl?.text) {
+      const mergeData = buildMergeData(null, d, settings)
+      return applyMergeFields(customTpl.text, mergeData)
+    }
+    return generateEstimateText(d, settings)
+  })
 
   const handleSave = () => {
     const finalText = editRef.current?.innerText || generatedText

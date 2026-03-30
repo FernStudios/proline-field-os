@@ -134,7 +134,11 @@ const INITIAL_STATE = {
     },
   },
   supportTickets: [],
-  customDocuments: [], // [{id, name, type:'contract'|'co'|'signed'|'other', jobId, uploadedAt, notes, fileData, fileName, fileSize}]          // submitted by this account to platform support
+  customDocuments: [],
+  customTemplates: {
+    // keyed by type: 'contract_a' | 'contract_b' | 'contract_c' | 'estimate' | 'co_02' | 'co_03a' | 'co_03b' | 'lien_waiver'
+    // each value: { id, name, type, text, fileName, createdAt, active }
+  }, // [{id, name, type:'contract'|'co'|'signed'|'other', jobId, uploadedAt, notes, fileData, fileName, fileSize}]          // submitted by this account to platform support
   accountTeam: [],             // [{id, name, email, role:'owner'|'office'|'foreman'|'crew', addedAt}]
   subscription: {              // subscription/billing metadata
     plan: 'trial',             // trial | solo | crew | company
@@ -325,6 +329,7 @@ export const useStore = create(
             subscription: state.subscription || {},
             rolePermissions: state.rolePermissions,
             customDocuments: state.customDocuments || [],
+            customTemplates: state.customTemplates || {},
             materials: state.materials,
             settings: state.settings,
             _nextCon: state._nextCon, _nextCO: state._nextCO, _nextInv: state._nextInv,
@@ -381,6 +386,19 @@ export const useStore = create(
       },
 
       setViewAsRole: (role) => set({ viewAsRole: role }),
+
+      // Custom document templates
+      saveCustomTemplate: (type, template) => set((s) => ({
+        customTemplates: {
+          ...s.customTemplates,
+          [type]: { ...template, id: type, updatedAt: new Date().toISOString() }
+        }
+      })),
+      deleteCustomTemplate: (type) => set((s) => {
+        const t = { ...s.customTemplates }
+        delete t[type]
+        return { customTemplates: t }
+      }),
 
       // Custom documents (uploaded contracts, wet-signed docs, etc.)
       addCustomDocument: (doc) => set((s) => ({

@@ -7,7 +7,7 @@ import RolePermissions from './pages/RolePermissions'
 import DocumentVault from './pages/DocumentVault'
 import DocumentViewer from './pages/contracts/DocumentViewer'
 import DocumentTemplates from './pages/DocumentTemplates'
-import CustomTemplates from './pages/CustomTemplates'
+import TemplateEditor from './pages/TemplateEditor'
 import AccountTeam from './pages/AccountTeam'
 import { useStore } from './store'
 import { ToastProvider } from './components/ui'
@@ -120,7 +120,8 @@ function AppRoutes() {
               <Route path="/documents" element={<DocumentVault />} />
               <Route path="/jobs/:jobId/doc/:docType/:docId" element={<DocumentViewer />} />
               <Route path="/document-templates" element={<DocumentTemplates />} />
-              <Route path="/templates" element={<CustomTemplates />} />
+              <Route path="/template-editor" element={<TemplateEditor />} />
+              <Route path="/template-editor/:templateType" element={<TemplateEditor />} />
               <Route path="/account-team" element={<AccountTeam />} />
               <Route path="/crew" element={<CrewView />} />
               <Route path="/jobs/:jobId/materials" element={<Materials />} />

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useStore } from '../../store'
 import { generateContractText } from '../../lib/contractText'
+import { buildMergeData, applyMergeFields } from '../../lib/mergeFields'
 import { TopNav } from '../../components/layout/AppShell'
 import { Button, Modal } from '../../components/ui'
 import { toast } from '../../components/ui'
@@ -9,7 +10,7 @@ import { toast } from '../../components/ui'
 export default function ContractPreview() {
   const { jobId } = useParams()
   const navigate = useNavigate()
-  const { settings, addContract, updateJob } = useStore()
+  const { settings, addContract, updateJob, customTemplates } = useStore()
   const [showGate, setShowGate] = useState(true)
   const [ackOption, setAckOption] = useState('')
   const [ackName, setAckName] = useState('')
@@ -27,6 +28,13 @@ export default function ContractPreview() {
   })()
   const [generatedText] = useState(() => {
     try {
+      // Check for custom template
+      const versionKey = `contract_${(wizardData.paymentVersion||'a').toLowerCase()}`
+      const customTpl = customTemplates?.[versionKey]
+      if (customTpl?.text) {
+        const mergeData = buildMergeData(null, wizardData, settings)
+        return applyMergeFields(customTpl.text, mergeData)
+      }
       return generateContractText(wizardData, settings)
     } catch(e) {
       console.error('Contract generation error:', e)
