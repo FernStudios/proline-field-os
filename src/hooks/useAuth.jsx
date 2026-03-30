@@ -1,40 +1,44 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStore } from '../store'
+import { clearAccountIdCache } from '../lib/db'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
-  const { loadFromSupabase, loadTemplateFromSupabase, syncToSupabase } = useStore()
+  const { loadFromSupabase, loadTemplateFromSupabase, syncToSupabase, setUserId } = useStore()
+
+  // Bootstrap account + cache account_id for a logged-in user
+  const handleLogin = async (supabaseUser) => {
+    if (!supabaseUser) return
+    await setUserId(
+      supabaseUser.id,
+      supabaseUser.email || '',
+      supabaseUser.user_metadata?.full_name || ''
+    )
+    await loadFromSupabase(supabaseUser.id)
+    await loadTemplateFromSupabase(supabaseUser.id)
+  }
 
   useEffect(() => {
     if (!supabase) { setLoading(false); return }
 
-    // Initial session check — load from Supabase once on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) {
-        loadFromSupabase(session.user.id)
-        loadTemplateFromSupabase(session.user.id)
-      }
+      if (session?.user) handleLogin(session.user)
       setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
 
-      // TOKEN_REFRESHED fires every ~hour and must NOT reload from Supabase
-      // — it would overwrite any unsaved local changes
-      // Only load on actual sign-in events
       if (event === 'SIGNED_IN' && session?.user) {
-        loadFromSupabase(session.user.id)
-        loadTemplateFromSupabase(session.user.id)
+        handleLogin(session.user)
       }
 
       if (event === 'SIGNED_UP' && session?.user) {
-        // New account — set trial dates then sync
         const store = useStore.getState?.()
         if (store?.updateSubscription) {
           store.updateSubscription({
@@ -43,7 +47,18 @@ export function AuthProvider({ children }) {
             renewalDate: new Date(Date.now() + 14 * 86400000).toISOString(),
           })
         }
-        setTimeout(() => syncToSupabase(session.user.id), 800)
+        // Bootstrap account for new signup
+        setUserId(
+          session.user.id,
+          session.user.email || '',
+          session.user.user_metadata?.full_name || ''
+        ).then(() => {
+          setTimeout(() => syncToSupabase(session.user.id), 800)
+        })
+      }
+
+      if (event === 'SIGNED_OUT') {
+        clearAccountIdCache()
       }
     })
 
@@ -65,6 +80,7 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     if (user) await syncToSupabase(user.id)
+    clearAccountIdCache()
     await supabase?.auth.signOut()
     setUser(null)
   }
@@ -76,7 +92,7 @@ export function AuthProvider({ children }) {
     return { error }
   }
 
-  // Auto-sync to Supabase every 2 minutes — push local → remote, never pull
+  // Auto-sync to Supabase every 2 minutes
   useEffect(() => {
     if (!user) return
     const interval = setInterval(() => syncToSupabase(user.id), 2 * 60 * 1000)

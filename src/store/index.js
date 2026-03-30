@@ -2,6 +2,19 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '../lib/supabase'
 import { uid } from '../lib/utils'
+import {
+  bootstrapAccount, getAccountId, clearAccountIdCache,
+  writeSettings, writeJob, deleteJob as dbDeleteJob,
+  writeEstimate, deleteEstimate as dbDeleteEstimate,
+  writeContract, deleteContract as dbDeleteContract,
+  writeChangeOrder, deleteChangeOrder as dbDeleteChangeOrder,
+  writeInvoice, writePayment,
+  writeExpense, deleteExpense as dbDeleteExpense,
+  writeCrew, deleteCrew as dbDeleteCrew,
+  writePayrollRun, writeLead, deleteLead as dbDeleteLead,
+  writeCustomTemplate, deleteCustomTemplate as dbDeleteCustomTemplate,
+  writeSnapshot, writeAuditEntry,
+} from '../lib/db'
 
 const INITIAL_STATE = {
   jobs: [],
@@ -58,6 +71,8 @@ const INITIAL_STATE = {
   _nextInv: 1001,
   _nextEst: 1001,
   schemaVersion: 2,
+  _userId: null,      // set on login via setUserId()
+  accountId: null,    // set after bootstrapAccount resolves
   rolePermissions: {
     // Owner always has full access — not stored here, always true
     office: {
@@ -159,12 +174,22 @@ export const useStore = create(
         const newJob = { id: uid(), created: new Date().toISOString(), status: 'active', kbStatus: 'new_lead', portalToken: uid() + uid(), ...job }
         set((s) => ({ jobs: [...s.jobs, newJob] }))
         get().auditLog('job_created', `Job created: ${newJob.client}`, newJob.id)
+        getAccountId(get()._userId).then(aid => { if (aid) writeJob(aid, newJob) })
         return newJob
       },
-      updateJob: (id, patch) => set((s) => ({
-        jobs: s.jobs.map((j) => j.id === id ? { ...j, ...patch, updated: new Date().toISOString() } : j)
-      })),
-      deleteJob: (id) => set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) })),
+      updateJob: (id, patch) => {
+        set((s) => ({
+          jobs: s.jobs.map((j) => j.id === id ? { ...j, ...patch, updated: new Date().toISOString() } : j)
+        }))
+        getAccountId(get()._userId).then(aid => {
+          const job = get().jobs.find(j => j.id === id)
+          if (aid && job) writeJob(aid, job)
+        })
+      },
+      deleteJob: (id) => {
+        set((s) => ({ jobs: s.jobs.filter((j) => j.id !== id) }))
+        dbDeleteJob(id)
+      },
       getJob: (id) => get().jobs.find((j) => j.id === id),
 
       // ── Contracts ─────────────────────────────────────────────────
@@ -173,12 +198,20 @@ export const useStore = create(
         const rec = { id: uid(), num, status: 'draft', created: new Date().toISOString(), versionTimestamp: new Date().toISOString(), ...contract }
         set((s) => ({ contracts: [...s.contracts, rec], _nextCon: s._nextCon + 1 }))
         get().auditLog('contract_created', `Contract ${num} created`, contract.jobId)
+        getAccountId(get()._userId).then(aid => { if (aid) writeContract(aid, rec) })
         return rec
       },
-      updateContract: (id, patch) => set((s) => ({
-        contracts: s.contracts.map((c) => c.id === id ? { ...c, ...patch } : c)
-      })),
-      deleteContract: (id) => set((s) => ({ contracts: s.contracts.filter((c) => c.id !== id) })),
+      updateContract: (id, patch) => {
+        set((s) => ({ contracts: s.contracts.map((c) => c.id === id ? { ...c, ...patch } : c) }))
+        getAccountId(get()._userId).then(aid => {
+          const doc = get().contracts.find(c => c.id === id)
+          if (aid && doc) writeContract(aid, doc)
+        })
+      },
+      deleteContract: (id) => {
+        set((s) => ({ contracts: s.contracts.filter((c) => c.id !== id) }))
+        dbDeleteContract(id)
+      },
 
       // ── Change Orders ─────────────────────────────────────────────
       addChangeOrder: (co) => {
@@ -197,12 +230,17 @@ export const useStore = create(
           }
         }
         get().auditLog('co_created', `Change Order ${num} created`, co.jobId)
+        getAccountId(get()._userId).then(aid => { if (aid) writeChangeOrder(aid, rec) })
         return rec
       },
       updateChangeOrder: (id, patch) => {
         set((s) => ({
           changeOrders: s.changeOrders.map((c) => c.id === id ? { ...c, ...patch } : c)
         }))
+        getAccountId(get()._userId).then(aid => {
+          const doc = get().changeOrders.find(c => c.id === id)
+          if (aid && doc) writeChangeOrder(aid, doc)
+        })
         // When CO is approved/declined, restore job to appropriate stage
         if (patch.status === 'approved' || patch.status === 'declined') {
           const co = get().changeOrders.find(c => c.id === id)
@@ -224,46 +262,113 @@ export const useStore = create(
         const num = `INV-${String(get()._nextInv).padStart(4, '0')}`
         const rec = { id: uid(), num, status: 'unpaid', payments: [], created: new Date().toISOString(), ...inv }
         set((s) => ({ invoices: [...s.invoices, rec], _nextInv: s._nextInv + 1 }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeInvoice(aid, rec) })
         return rec
       },
-      addPayment: (invoiceId, payment) => set((s) => ({
+      addPayment: (invoiceId, payment) => {
+        const pid = payment.id || uid()
+        set((s) => ({
         invoices: s.invoices.map((inv) => {
           if (inv.id !== invoiceId) return inv
-          const payments = [...(inv.payments || []), { id: uid(), ...payment, date: new Date().toISOString() }]
+          const payments = [...(inv.payments || []), { id: pid, ...payment, date: payment.date || new Date().toISOString() }]
           const totalPaid = payments.reduce((sum, p) => sum + (p.amount || 0), 0)
           const status = totalPaid >= inv.amount ? 'paid' : 'partial'
           return { ...inv, payments, status }
         })
-      })),
+      }))
+        getAccountId(get()._userId).then(aid => {
+          if (aid) writePayment(aid, invoiceId, { id: pid, ...payment })
+        })
+      },
 
       // ── Expenses ──────────────────────────────────────────────────
-      addExpense: (exp) => set((s) => ({ expenses: [...s.expenses, { id: uid(), date: new Date().toISOString(), ...exp }] })),
-      deleteExpense: (id) => set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) })),
+      addExpense: (exp) => {
+        const rec = { id: uid(), date: new Date().toISOString(), ...exp }
+        set((s) => ({ expenses: [...s.expenses, rec] }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeExpense(aid, rec) })
+      },
+      deleteExpense: (id) => {
+        set((s) => ({ expenses: s.expenses.filter((e) => e.id !== id) }))
+        dbDeleteExpense(id)
+      },
 
       // ── Crew ──────────────────────────────────────────────────────
-      addCrew: (member) => set((s) => ({ crew: [...s.crew, { id: uid(), ...member }] })),
-      updateCrew: (id, patch) => set((s) => ({ crew: s.crew.map((c) => c.id === id ? { ...c, ...patch } : c) })),
-      deleteCrew: (id) => set((s) => ({ crew: s.crew.filter((c) => c.id !== id) })),
+      addCrew: (member) => {
+        const rec = { id: uid(), ...member }
+        set((s) => ({ crew: [...s.crew, rec] }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeCrew(aid, rec) })
+      },
+      updateCrew: (id, patch) => {
+        set((s) => ({ crew: s.crew.map((c) => c.id === id ? { ...c, ...patch } : c) }))
+        getAccountId(get()._userId).then(aid => {
+          const m = get().crew.find(c => c.id === id)
+          if (aid && m) writeCrew(aid, m)
+        })
+      },
+      deleteCrew: (id) => {
+        set((s) => ({ crew: s.crew.filter((c) => c.id !== id) }))
+        dbDeleteCrew(id)
+      },
 
       // ── Payroll ───────────────────────────────────────────────────
-      addPayrollRun: (run) => set((s) => ({ payrollRuns: [...s.payrollRuns, { id: uid(), ...run, date: new Date().toISOString() }] })),
+      addPayrollRun: (run) => {
+        const rec = { id: uid(), ...run, date: run.date || new Date().toISOString() }
+        set((s) => ({ payrollRuns: [...s.payrollRuns, rec] }))
+        getAccountId(get()._userId).then(aid => { if (aid) writePayrollRun(aid, rec) })
+      },
 
       // ── Leads ─────────────────────────────────────────────────────
-      addLead: (lead) => set((s) => ({ leads: [...s.leads, { id: uid(), created: new Date().toISOString(), ...lead }] })),
-      updateLead: (id, patch) => set((s) => ({ leads: s.leads.map((l) => l.id === id ? { ...l, ...patch } : l) })),
-      deleteLead: (id) => set((s) => ({ leads: s.leads.filter((l) => l.id !== id) })),
+      addLead: (lead) => {
+        const rec = { id: uid(), created: new Date().toISOString(), ...lead }
+        set((s) => ({ leads: [...s.leads, rec] }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeLead(aid, rec) })
+      },
+      updateLead: (id, patch) => {
+        set((s) => ({ leads: s.leads.map((l) => l.id === id ? { ...l, ...patch } : l) }))
+        getAccountId(get()._userId).then(aid => {
+          const lead = get().leads.find(l => l.id === id)
+          if (aid && lead) writeLead(aid, lead)
+        })
+      },
+      deleteLead: (id) => {
+        set((s) => ({ leads: s.leads.filter((l) => l.id !== id) }))
+        dbDeleteLead(id)
+      },
 
       // ── Estimates ─────────────────────────────────────────────────
-      addEstimate: (est) => set((s) => ({ estimates: [...s.estimates, est], _nextEst: (s._nextEst || 1001) + 1 })),
-      updateEstimate: (id, patch) => set((s) => ({ estimates: s.estimates.map((e) => e.id === id ? { ...e, ...patch } : e) })),
-      deleteEstimate: (id) => set((s) => ({ estimates: s.estimates.filter((e) => e.id !== id) })),
-      deleteChangeOrder: (id) => set((s) => ({ changeOrders: s.changeOrders.filter((c) => c.id !== id) })),
+      addEstimate: (est) => {
+        set((s) => ({ estimates: [...s.estimates, est], _nextEst: (s._nextEst || 1001) + 1 }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeEstimate(aid, est) })
+      },
+      updateEstimate: (id, patch) => {
+        set((s) => ({ estimates: s.estimates.map((e) => e.id === id ? { ...e, ...patch } : e) }))
+        getAccountId(get()._userId).then(aid => {
+          const est = get().estimates.find(e => e.id === id)
+          if (aid && est) writeEstimate(aid, est)
+        })
+      },
+      deleteEstimate: (id) => {
+        set((s) => ({ estimates: s.estimates.filter((e) => e.id !== id) }))
+        dbDeleteEstimate(id)
+      },
+      deleteChangeOrder: (id) => {
+        set((s) => ({ changeOrders: s.changeOrders.filter((c) => c.id !== id) }))
+        dbDeleteChangeOrder(id)
+      },
 
       // ── Settings ──────────────────────────────────────────────────
-      updateSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
-      updateContractDefaults: (patch) => set((s) => ({
+      updateSettings: (patch) => {
+        set((s) => ({ settings: { ...s.settings, ...patch } }))
+        getAccountId(get()._userId).then(aid => {
+          if (aid) writeSettings(aid, get().settings)
+        })
+      },
+      updateContractDefaults: (patch) => {
+        set((s) => ({
         settings: { ...s.settings, contractDefaults: { ...s.settings.contractDefaults, ...patch } }
-      })),
+        }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeSettings(aid, get().settings) })
+      },
 
       // ── Contract Template ─────────────────────────────────────────
       setContractTemplate: (tpl, meta) => {
@@ -344,6 +449,9 @@ export const useStore = create(
           .from('user_data')
           .upsert(row, { onConflict: 'user_id' })
         if (error) console.warn('Supabase sync error:', error.message, error.code)
+        // Write snapshot to relational snapshots table for 30-day rollback
+        const { accountId: aid } = get()
+        if (aid) writeSnapshot(aid, row.db)
       },
 
       loadFromSupabase: async (userId) => {
@@ -390,18 +498,32 @@ export const useStore = create(
 
       setViewAsRole: (role) => set({ viewAsRole: role }),
 
+      // Called from auth context on login — bootstraps account and caches IDs
+      setUserId: async (userId, email, name) => {
+        set({ _userId: userId })
+        const accountId = await bootstrapAccount(userId, email, name)
+        set({ accountId })
+        return accountId
+      },
+
       // Custom document templates
-      saveCustomTemplate: (type, template) => set((s) => ({
+      saveCustomTemplate: (type, template) => {
+        set((s) => ({
         customTemplates: {
           ...s.customTemplates,
           [type]: { ...template, id: type, updatedAt: new Date().toISOString() }
         }
-      })),
-      deleteCustomTemplate: (type) => set((s) => {
+      }))
+        getAccountId(get()._userId).then(aid => { if (aid) writeCustomTemplate(aid, type, template) })
+      },
+      deleteCustomTemplate: (type) => {
+        getAccountId(get()._userId).then(aid => { if (aid) dbDeleteCustomTemplate(aid, type) })
+        set((s) => {
         const t = { ...s.customTemplates }
         delete t[type]
         return { customTemplates: t }
-      }),
+        })
+      },
 
       // Custom documents (uploaded contracts, wet-signed docs, etc.)
       addCustomDocument: (doc) => set((s) => ({
