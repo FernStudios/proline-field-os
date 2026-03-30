@@ -135,6 +135,18 @@ export default function Admin() {
               </div>
             </div>
 
+            <button onClick={() => navigate('/document-templates')}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 hover:border-gray-200 transition-colors mb-2">
+              <div className="flex items-center gap-3">
+                <span className="text-xl">📝</span>
+                <div className="text-left">
+                  <p className="font-semibold text-sm text-navy">Edit document templates</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Scope, warranty, CO opening language</p>
+                </div>
+              </div>
+              <span className="text-gray-300 text-sm">›</span>
+            </button>
+
             <SectionTitle>Contract defaults</SectionTitle>
             <div className="grid grid-cols-2 gap-3">
               <FormGroup label="Late fee (%/mo)" hint="Default 1.5% = 18%/yr"><Input type="number" step="0.1" value={contractSettings.lateFee} onChange={e=>setContractSettings(c=>({...c,lateFee:parseFloat(e.target.value)||1.5}))} /></FormGroup>

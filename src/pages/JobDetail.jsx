@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useStore } from '../store'
+import { sendPortalLink } from '../lib/sendEmail'
 import { fmtM, fmtDShort, cn, uid } from '../lib/utils'
 import { TopNav } from '../components/layout/AppShell'
 import { Button, Card, Badge, Modal, FormGroup, Input, Select, Textarea, SectionTitle, Empty } from '../components/ui'
@@ -52,6 +53,7 @@ export default function JobDetail() {
   const navigate = useNavigate()
   const { jobs, contracts, changeOrders, invoices, estimates, expenses, addInvoice, addPayment, updateJob, updateChangeOrder, settings } = useStore()
   const [tab, setTab] = useState('Overview')
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [showCOSelector, setShowCOSelector] = useState(false)
   const [showLienWaiver, setShowLienWaiver] = useState(false)
   const [showStatusEdit, setShowStatusEdit] = useState(false)
@@ -64,6 +66,27 @@ export default function JobDetail() {
   const [taskText, setTaskText] = useState('')
 
   const job = jobs.find(j => j.id === jobId)
+
+  const handleSendPortalEmail = async () => {
+    if (!job?.email) { toast('No customer email on this job — add one first', 'error'); return }
+    if (!job?.portalToken) { toast('No portal token on this job', 'error'); return }
+    setSendingEmail(true)
+    const result = await sendPortalLink({
+      customerEmail: job.email,
+      customerName: job.client,
+      portalToken: job.portalToken,
+      jobAddress: job.address,
+      jobType: job.type,
+      companyName: settings.coName,
+      companyPhone: settings.coPhone,
+    })
+    setSendingEmail(false)
+    if (result.success) {
+      toast('Portal link emailed to ' + job.email)
+    } else {
+      toast('Email failed — check Brevo API key in Admin', 'error')
+    }
+  }
   const isHydrated = useStore(s => s._hydrated !== false)
   if (!job && !isHydrated) return (
     <div className="fixed inset-0 flex items-center justify-center bg-white">
@@ -291,7 +314,11 @@ export default function JobDetail() {
                               className="text-xs text-brand mt-0.5">Copy portal link</button>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400">{fmtDShort(est.created)}</p>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-xs text-gray-400">{fmtDShort(est.created)}</p>
+                          <button onClick={() => navigate(`/jobs/${jobId}/doc/estimate/${est.id}`)}
+                            className="text-xs font-semibold text-brand">View →</button>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -311,7 +338,11 @@ export default function JobDetail() {
                             <p className="text-xs text-amber-600 mt-1">Awaiting customer signature</p>
                           )}
                         </div>
-                        <p className="text-xs text-gray-400">{fmtDShort(c.created)}</p>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-xs text-gray-400">{fmtDShort(c.created)}</p>
+                          <button onClick={() => navigate(`/jobs/${jobId}/doc/contract/${c.id}`)}
+                            className="text-xs font-semibold text-brand">View →</button>
+                        </div>
                       </div>
                     </Card>
                   ))}
@@ -326,7 +357,11 @@ export default function JobDetail() {
                           <p className="text-xs text-gray-400">{c.coType==='customer'?'Customer-requested':c.coType==='required_a'?'Required — Track A':'Required — Track B'}</p>
                           {c.amount > 0 && <p className="text-xs text-gray-400">{fmtM(c.amount)}</p>}
                         </div>
-                        <p className="text-xs text-gray-400">{fmtDShort(c.created)}</p>
+                        <div className="flex flex-col items-end gap-1">
+                          <p className="text-xs text-gray-400">{fmtDShort(c.created)}</p>
+                          <button onClick={() => navigate(`/jobs/${jobId}/doc/co/${c.id}`)}
+                            className="text-xs font-semibold text-brand">View →</button>
+                        </div>
                       </div>
                     </Card>
                   ))}

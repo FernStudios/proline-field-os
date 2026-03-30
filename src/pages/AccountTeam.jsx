@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { sendInviteEmail } from '../lib/sendEmail'
 import { useStore } from '../store'
 import { useAuth } from '../hooks/useAuth'
 import { TopNav } from '../components/layout/AppShell'
